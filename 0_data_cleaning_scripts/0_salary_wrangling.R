@@ -18,8 +18,8 @@ library(here)
 ##### Data Sets #####
 #####################
 
-nba_salaries_1990_2017 <- readxl::read_excel(here('data/nba_salaries_1990_2017.xlsx'))
-nba_salaries_1996_2019 <- read_csv(here('data/nba_salaries_1996_2019.csv'))
+nba_salaries_1990_2017 <- readxl::read_excel(here('data/raw/nba_salaries_1990_2017.xlsx'))
+nba_salaries_1996_2019 <- read_csv(here('data/raw/nba_salaries_1996_2019.csv'))
 
 
 ### webscraping function for salaries on ESPN ###
@@ -70,7 +70,7 @@ for(i in c('2021', '2022', '2023')){
 }
 
 # saving nba_salaries_2020_2022
-write_rds(nba_salaries_2020_2022, here('data/nba_salaries_2020_2022.rds'))
+write_rds(nba_salaries_2020_2022, here('data/raw/nba_salaries_2020_2022.rds'))
 
 ################################################################################
 ################################################################################
