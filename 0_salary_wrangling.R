@@ -153,7 +153,7 @@ nba_salaries <-
     player = str_replace_all(player, '\\.', ''),
     player = str_replace_all(player, "'", ''))
 
-# save the fina dataset)
+# save the final dataset
 write_rds(nba_salaries, here('data/nba_salaries.rds'))
 
 ################################################################################

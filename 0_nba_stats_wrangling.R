@@ -1,4 +1,10 @@
-
+########################################
+########################################
+#######                         ########
+######      STATS WRANGLING      #######
+#######                         ########
+########################################
+########################################
 
 #####################
 ##### Libraries #####
@@ -12,12 +18,19 @@ library(stringi)
 ##### Data Sets #####
 #####################
 
-nba_stats <- read_csv('data/nba_stats.csv')
+nba_stats <- read_csv('data/nba_stats_raw.csv')
 
+# seasons when the player made the playoffs
 made_playoffs <- read_csv('data/advanced_made_playoffs.csv')
 
+# players that were playing in 1990
 players_1990 <- read_csv('data/1990_year_in_nba.csv')
 
+################################################################################
+################################################################################
+
+# this vector represents how many years a player who was in the NBA in 1990
+##has played in the league. The order is based on `players_1990`
 debuts <- c(rep(1, times = 73), 
             rep(2, times = 135 - 73),
             rep(3, times = 177 - 135),
@@ -35,16 +48,7 @@ debuts <- c(rep(1, times = 73),
             rep(15, times = 386 - 383),
             17)
 
-
-#nba_stats <- 
-#nba_stats |> 
-#  janitor::clean_names()
-
-#made_playoffs <-
-#  made_playoffs |> 
-#  janitor::clean_names()
-
-#adding the playoffs column
+#adding the playoffs column to nba_stats
 nba_stats <-
 nba_stats |> 
   janitor::clean_names() |> 
@@ -64,6 +68,8 @@ nba_stats |>
   select(-c(team.y, dummy_team)) |> 
   rename(team = team.x) |> 
   mutate(season = as.numeric(str_extract(season, '^....')),
+         # these names are instances where there are two or more players with the same name
+         ##distinguishing their season salaries here
          player = case_when((player == 'Gerald Henderson' & season %in% c(2009:2016)) ~ 'Gerald Henderson_0',
                             (player == 'Brandon Williams' & season == 2021) ~ 'Brandon Williams_0',
                             (player == 'Reggie Williams' & season %in% c(2009:2016)) ~ 'Reggie Williams_0',
@@ -77,7 +83,8 @@ nba_stats |>
                             (player == 'Michael Smith' & season %in% c(1994:2000)) ~ 'Michael Smith_0',
                             .default = player))
 
-
+# finding each players rookie season by filtering by players, arranging data by year,
+##and extracting that year
 first_season_tibble <- tibble()
 
 for(i in unique(nba_stats$player) ){
@@ -99,33 +106,36 @@ first_season <-
   
 }
 
-
-######### trying to fix the debut problems
+# making categorical predictors
 nba_stats <-
 nba_stats |> 
+  # joining nba_stats data with the dataset that has the players' rookie year
   left_join(first_season_tibble, join_by(player, rk)) |> 
   relocate(season.y, .after = season.x) |> 
   mutate(season.x = as.numeric(str_extract(season.x, '^....')),
          season.y = as.numeric(str_extract(season.y, '^....'))) |> 
   rename(season = season.x,
          rookie_season = season.y) |> 
-  #relocate(years_in_league, .after = season.y) |> 
   left_join(
+    # by left-joining, we have the number of years a player who played in 1990
+    ##has been in the NBA
     players_1990 |> 
       janitor::clean_names() |> 
-      mutate(years_in_league = debuts,
-             player == if_else(rk == 53, 'Charles Smith_0', player)) |> 
+      mutate(years_in_league = debuts) |> 
       select(player, team, years_in_league),
     join_by(player)
   ) |> 
+  # if `years_in_league` is NA, it means you were not in the NBA in 1990, meaning
+  ##we can just use the rookie season variable found through `first_season_tibble`
   mutate(years_in_league = if_else(is.na(years_in_league),
                               season - rookie_season + 1,
                               years_in_league + (season - rookie_season)),
          five_years = if_else(years_in_league > 5, 1, 0),
-         ten_years = if_else(years_in_league > 10, 1, 0)) |> #,
-        # player = if_else(str_detect(player, '_\\d$'), str_remove(player, '_\\d$'), player)) |> 
+         ten_years = if_else(years_in_league > 10, 1, 0)) |>  
   relocate(c(years_in_league, five_years, ten_years), .after = rookie_season) |> 
   rename(team = team.x) |> 
+  # some teams have had name changes or location changes, conforming team names to
+  ## modern abbreviations
   mutate(team = case_when(team == 'NOH' ~ 'NOP',
                           team == 'SEA' ~ 'OKC',
                           team == 'NJN' ~ 'BRK',
@@ -135,16 +145,23 @@ nba_stats |>
                           team == 'WSB' ~ 'WAS',
                           team == 'VAN' ~ 'MEM',
                           .default = team),
+         # finding NBA conference
          conference = if_else(team %in% c('BOS', 'MIL', 'NYK', 'CLE', 'PHI', 
                                           'IND', 'MIA', 'ORL', 'CHI', 'ATL',
                                           'BRK', 'TOR', 'CHA', 'WAS', 'DET'),
                               'east', 'west'),
+         # market size is determined by the value of the team, according to Forbes
+         ##large market --> teams ranked 1 - 10
+         ##medium market --> teams ranked 11 - 20
+         ##small market --> teams ranked 21 - 30
          market_size = case_when(team %in% c('GSW', 'NYK', 'LAL', 'BOS', 'LAC', 'CHI', 'DAL', 'HOU', 'PHI', 'TOR')
                                  ~ 'large',
                                  team %in% c('PHO', 'MIA', 'BRK', 'WAS', 'DEN', 'CLE', 'SAC', 'ATL', 'SAS', 'MIL')
                                  ~ 'medium',
                                  team %in% c('UTA', 'POR', 'DET', 'OKC', 'CHA', 'ORL', 'IND', 'NOP', 'MIN', 'MEM')
                                  ~ 'small'),
+         # salary data does not have special Latin letter such as à -- replace them
+         ##in this dataset with standard letters
          player = stri_trans_general(player, 'Latin-ASCII'),
          player = str_replace_all(player, '\\.', ''),
          player = str_replace_all(player, "'", '')
@@ -152,103 +169,11 @@ nba_stats |>
   select(-c(rookie_season, team.y, x9999)) |> 
   relocate(c(conference, market_size), .after = team)
 
+# save the NBA stats data
 write_rds(nba_stats, here('data/nba_stats.rds'))
 
-#nba_stats2 <-
-#  nba_stats |> 
-#  mutate(player = stri_trans_general(player, 'Latin-ASCII'),
-#         player = str_replace_all(player, '\\.', ''),
-#         player = str_replace_all(player, "'", ''))
-
-##########################################################################################
-##########################################################################################
-nba_stats |> 
-  distinct(team.x) |> 
-  print(n = 40)
-
-nba_stats |> 
-  filter(team.x == 'WSB')
-
-
-test |> 
-  filter(player == 'Michael Jordan') |> 
-  select(c(player, season))
-  arrange(season) |> 
-  slice_head()
-  
-
-atl_playoffs <- c(1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 
-                  2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 
-                  2018, 2019, 2020, 2021, 2022, 2023)
-bos_playoffs <- c(1990, 1991, 1992, 1993, 1995, 2002, 2003, 2004, 2005, 2008, 2009, 
-                  2010, 2011, 2012, 2013, 2015, 2016, 2017, 2018, 2019, 2020, 
-                  2021, 2022, 2023)
-blk_playoffs <- c(1991, 1992, 1993, 1994, 1998, 2002, 2003, 2004, 2005, 2006, 
-                  2007, 2013, 2014, 2015, 2019, 2020, 2021, 2022, 2023)
-cha_playoffs <- c(1993, 1995, 1997, 1998, 1999, 2000, 2001, 2002, 2009, 2010, 2014, 
-                  2016)
-chi_playoffs <- c(1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 2005, 2006, 2007, 2009, 
-                  2010, 2011, 2012, 2013, 2014, 2017, 2022)
-cle_playoffs <- c(1990, 1992, 1993, 1994, 1995, 1996, 1998, 2006, 2007, 2008, 
-                  2009, 2010, 2015, 2016, 2017, 2018, 2020)
-det_playoffs <- c(1990, 1991, 1992, 1996, 1997, 1999, 2000, 2001, 2002, 2003, 
-                  2004, 2005, 2006, 2007, 2008, 2009, 2016, 2019)
-ind_playoffs <- c(1990, 1991, 1992, 1993, 1994, 1995, 1996, 1998, 1999, 2000, 
-                  2001, 2002, 2003, 2004, 2005, 2006, 2011, 2012, 2013, 2014, 2016, 
-                  2017, 2018, 2019)
-mia_playoffs <- c(1992, 1993, 1994, 1996, 1997, 1998, 1999, 2000, 2001, 2004, 
-                  2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 
-                  2016, 2018, 2020, 2021)
-mil_playoffs <- c(1990, 1991, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2006, 2010, 2013, 
-                  2015, 2018, 2019, 2020, 2021)
-nyk_playoffs <- c(1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 
-                  2001, 2004, 2011, 2012, 2013)
-orl_playoffs <- c(1994, 1995, 1996, 1997, 1999, 2001, 2002, 2003, 2007, 2008, 
-                  2009, 2010, 2019)
-phi_playoffs <- c(1990, 1991, 1999, 2000, 2001, 2002, 2003, 2005, 2008, 2009, 
-                  2011, 2012, 2018, 2019, 2020, 2021)
-tor_playoffs <- c(2000, 2001, 2002, 2007, 2008, 2014, 2015, 2016, 2017, 2018, 
-                  2019, 2020, 2021)
-was_playoffs <- c(1997, 1998, 1999, 2000, 2001, 2002, 2003, 2005, 2006, 2007, 2008, 
-                  2014, 2015, 2017, 2018)
-
-
-
-dal_playoffs <- c(1990, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 
-                  2010, 2011, 2012, 2014, 2015, 2016, 2018, 2019, 2020, 2021)
-den_playoffs <- c(1990, 1994, 1995, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 
-                  2011, 2012, 2019, 2020, 2021)
-gsw_playoffs <- c(1991, 1992, 1994, 2007, 2013, 2014, 2015, 2016, 2017, 2018, 
-                  2019, 2020, 2021)
-hou_playoffs <- c(1990, 1991, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2004, 2005, 
-                  2007, 2008, 2009, 2010, 2013, 2014, 2015, 2016, 2017, 2018, 
-                  2019, 2020, 2021)
-lac_playoffs <- c(1992, 1993, 1997, 2006, 2012, 2012, 2014, 2015, 2016, 2017, 
-                  2019, 2020, 2021)
-lal_playoffs <- c(1990, 1991, 1992, 1993, 1995, 1996, 1997, 1998, 1999, 2000, 
-                  2001, 2002, 2003, 2004, 2006, 2007, 2008, 2009, 2010, 2011, 
-                  2012, 2013, 2018, 2020)
-mem_playoffs <- c(2004, 2005, 2006, 2011, 2012, 2013, 2014, 2015, 2016, 2017)
-min_playoffs <- c(1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2018)
-nop_playoffs <- c(2002, 2003, 2008, 2009, 2011, 2015, 2018)
-okc_playoffs <- c(1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 2000, 2002, 2005, 2010, 
-                  2011, 2012, 2013, 2014, 2016, 2017, 2018)
-pho_playoffs <- c(1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 
-                  2002, 2003, 2005, 2006, 2007, 2008, 2010, 2011, 2013, 2021)
-por_playoffs <- c(1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 
-                  2003, 2009, 2010, 2011, 2014, 2015, 2016, 2018, 2019, 2020, 2021)
-sac_playoffs <- c(1996, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006)
-sas_playoffs <- c(1990, 1991, 1992, 1993, 1994, 1995, 1996, 1998, 1999, 2000, 2001, 
-                  2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 
-                  2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021)
-uta_playoffs <- c(1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 
-                  2003, 2007, 2008, 2009, 2010, 2011, 2012, 2017, 2018, 2019, 
-                  2020, 2021)
-
-
-
-
-
-
-
-
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
