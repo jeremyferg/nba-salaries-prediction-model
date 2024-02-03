@@ -38,7 +38,7 @@ nba_seasons <-
   inner_join(nba_salaries, join_by(player, season)) |> 
   relocate(c(pos, salary), .after = team) 
   
-
+nba_seasons <-
 nba_seasons |> 
   inner_join(cpi_data, join_by(season)) |> 
   mutate(five_years = factor(five_years),
@@ -51,7 +51,7 @@ nba_seasons |>
          
          player = if_else(str_detect(player, '_\\d$'), str_remove(player, '_\\d$'), player),
          
-         adj_salary = (salary)/(cpi/307.671)
+         adj_salary = floor((salary)/(cpi/307.671))
          
          )|> 
   select(-c(rk, cpi)) |> 
@@ -59,9 +59,6 @@ nba_seasons |>
   relocate(adj_salary, .after = salary)
   
 
-
-#|> 
-  skimr::skim_without_charts()
-
+write_rds(nba_seasons, here('data/nba_seasons.rds'))
 
 
