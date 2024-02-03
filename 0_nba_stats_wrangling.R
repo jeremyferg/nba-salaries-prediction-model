@@ -18,14 +18,15 @@ library(stringi)
 ##### Data Sets #####
 #####################
 
-nba_stats <- read_csv('data/nba_stats_raw.csv')
+nba_stats <- read_csv(here('data/nba_stats_raw.csv'))
 
 # seasons when the player made the playoffs
-made_playoffs <- read_csv('data/advanced_made_playoffs.csv')
+made_playoffs <- read_csv(here('data/advanced_made_playoffs.csv'))
 
 # players that were playing in 1990
-players_1990 <- read_csv('data/1990_year_in_nba.csv')
+players_1990 <- read_csv(here('data/1990_year_in_nba.csv'))
 
+################################################################################
 ################################################################################
 ################################################################################
 
