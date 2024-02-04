@@ -43,6 +43,16 @@ GitHub (free account) cannot store large files. If you try to commit and push a 
 **We may need to do that for files in your final project!**
 :::
 
+```{r}
+#| label: libraries
+#| echo: false
+
+library(tidyverse)
+library(here)
+
+```
+
+
 ## Prediction Problem
 
 This project aims to create a predictive model that can estimate the yearly salaries of professional basketball players from the National Basketball Association (NBA). This model will mainly use season statistics from players as its predictors. Other NBA-related factors, such as the location of the player’s team and how long the player has been in the NBA, will be used for this analysis.
@@ -52,6 +62,178 @@ This research question is a regression problem; we are trying to predict salary,
 I see this research most benefiting NBA players. With this model, players would have a better understanding of what they should expect from contract offers based on their previous performance. The model would also help indicate what factors outside of the players’ control, such as what conference a team plays in, contribute towards their salaries.
 
 Besides its player-specific benefits, this model allows me to explore the NBA computationally. I am a great fan of the NBA (especially my hometown Chicago Bulls), so creating this model has already been fun and informative of historical season statistics.
+
+## Data sources
+
+When searching for a data source, I wanted data that recorded season statistics and salaries of players over an extended period. Unfortunately, I could not find one data set that had this information. So, I decided to do a bit of data wrangling and merging of data sets.
+
+### Salaries
+
+I found a few data sets with yearly NBA salaries for each player on [Kaggle](https://www.kaggle.com/). The first data set, by [“patrick”, provides salary data from 1996 to 2019](https://www.kaggle.com/datasets/patrickhallila1994/nba-data-from-basketball-reference).
+
+```{r}
+#| label: salary_readin_1996_2019
+#| echo: true
+
+# reading in data
+nba_salaries_1996_2019 <- read_csv(here('data/raw/nba_salaries_1996_2019.csv'))
+
+nba_salaries_1996_2019 |> 
+  DT::datatable(caption = 'nba_salaries_1996_2019')
+
+```
+
+The second data set, by [“Fernando Blanco”, provides salary data from 1990 to 2017](https://www.kaggle.com/datasets/whitefero/nba-player-salary-19902017?resource=download).
+
+```{r}
+#| label: salary_readin_1990_2017
+#| echo: true
+
+# reading in data
+nba_salaries_1990_2017 <- readxl::read_excel(here('data/raw/nba_salaries_1990_2017.xlsx'))
+
+nba_salaries_1990_2017 |> 
+  DT::datatable(caption = 'nba_salaries_1990_2017')
+
+```
+
+I combined these two data sets to get salaries from 1990 to 2019. In addition, I web-scrapped [2020, 2021, and 2022 season salaries from ESPN](https://www.espn.com/nba/salaries). The web-scrapping function used is shown below. 
+
+```{r}
+#| label: espn_webscrapping
+#| eval: false
+#| echo: true
+
+# code used to web scrape
+get_salaries <- function(year = '2023'){
+  
+  # where all salaries are stored
+  salaries_df <- data.frame()
+  
+  #where salaries for individual years are stored
+  salaries_page <- tibble(c(1))
+  
+  year_link <- paste0('https://www.espn.com/nba/salaries/_/year/', year, '/page/1')
+  page_num <- 1
+  
+  # keep iterating through pages until you reach a page with an empty salary table
+  ##indicating that we have collected all the salaries 
+  while(nrow(salaries_page) != 0){
+    
+    salaries_page <- 
+      read_html(year_link) |> 
+      html_element('.span-4') |> 
+      html_table() |> 
+      filter(`X1` != 'RK') |> 
+      mutate(year = as.double(year) - 1)
+    
+    salaries_df <- rbind(salaries_df, salaries_page)
+    
+    page_num <- page_num + 1
+    
+    year_link <- paste0('https://www.espn.com/nba/salaries/_/year/', year, '/page/', as.character(page_num))
+    
+  }
+  
+  return(salaries_df)
+  
+}
+
+```
+
+After merging, additional cleaning of players' names had to be done. The code below shows me distinguishing between players who have matching names (EX: There have been multiple players named Charles Smith). Since this salary data and the season stats data do not have any matching ID variables, I had to rely on a composite key of the player’s name and the season for merging. So distinguishing individual players was critical.
+
+```{r}
+#| label: distinguish_players
+#| echo: true
+#| eval: false
+
+# distinguishing players
+nba_salaries <-
+  nba_salaries |> 
+  mutate(
+    player = case_when((player == 'Gerald Henderson' & season %in% c(2009:2016)) ~ 'Gerald Henderson_0',
+                       (player == 'Brandon Williams' & season == 2021) ~ 'Brandon Williams_0',
+                       (player == 'Reggie Williams' & season %in% c(2009:2016)) ~ 'Reggie Williams_0',
+                       (player == 'Patrick Ewing' & season == 2010) ~ 'Patrick Ewing_0',
+                       (player == 'Chris Smith' & season == 2013) ~ 'Chris Smith_0',
+                       (player == 'Dee Brown' & season %in% c(2006, 2008)) ~ 'Dee Brown_0',
+                       (player == 'Charles Jones' & season %in% c(1998:1999)) ~ 'Charles Jones_0',
+                       (player == 'Charles Smith' & season %in% c(1997:2005)) ~ 'Charles Smith_0',
+                       (player == 'Charles Smith' & salary == 225000) ~ 'Charles Smith_1',
+                       (player == 'Mike James' & season %in% c(2017, 2020)) ~ 'Mike James_0',
+                       (player == 'Michael Smith' & season %in% c(1994:2000)) ~ 'Michael Smith_0',
+                       .default = player),
+    player = str_replace_all(player, '\\.', ''),
+    player = str_replace_all(player, "'", ''))
+
+```
+
+Here is the cleaned salary data set. Additional details of these processes are found in `0_salary_wrangling.R`.
+
+```{r}
+#| label: nba_salaries
+#| echo: true
+
+# reading in data
+nba_salaries <- read_rds(here('data/nba_salaries.rds'))
+
+nba_salaries |> 
+  DT::datatable(caption = 'nba_salaries')
+
+```
+
+### Season Statistics
+
+Season statistics were collected through [Stathead Basketball’s querying system](https://stathead.com/basketball/):
+
+```{r}
+#| label: nba_stats
+#| echo: true
+
+nba_stats <- read_rds(here('data/nba_stats.rds'))
+
+nba_stats |> 
+  DT::datatable(caption = 'nba_stats')
+
+```
+
+Collecting these baseline statistics was not difficult. However, it is obvious that this data set almost entirely has numerical predictors. Thus, the majority of the work done in `0_nba_stats_wrangling.R` was adding categorical predictors to the dataset. Some of these predictors include `made_playoffs`, which indicates whether or not a player played in the playoffs that year, and `five_years`, which indicates that a player has been in the NBA for five or more years. Of course, the detailed process of computing these variables is found in the R script. Here is the final product of season statistics alongside the final merging with salaries:
+
+```{r}
+#| label: nba_season
+#| echo: true
+
+nba_seasons <- read_rds(here('data/nba_seasons.rds'))
+
+nba_seasons |> 
+  DT::datatable(caption = 'nba_seasons')
+
+```
+
+### Quality Check
+
+Overall, the data set has 13986 observations with 7 categorical predictors and 29 numerical predictors. The dataset has observations from the 1990-1991 season to the 2022-2023 season. It is important to note that a few of the numeric variables are variations of each other (EX: `x2p_percent`, which measures 2-point shot percentages, is simply the 2-point shots made variable divided by the 2-point shots attempted variable). If this discrepancy becomes a complexity problem, there is always the option of creating additional categorical predictors.
+
+Concerning missingness, all missing observations come from the `_percent` variables.
+
+```{r}
+#| label: missigness
+
+nba_seasons |> 
+  naniar::miss_var_summary() |> 
+  DT::datatable(caption = 'Missing Values Summary')
+```
+
+We can interpret this missingness as players who never took a 2-point shot, 3-point shot, or either during a season. The 3-point shot missingness does not bother me since historically players have contributed greatly to a team while never taking a 3-point shot in a season; These NAs can just be replaced with 0s. Those without a 2-point attempt concern me, as these players also have 0 or near 0 statistics for every other numerical predictor. Since these observations make up a small part of the dataset, it may be best just to drop them. The table below shows observations with missing 3-point percentages. The table can be used to show players who had great seasons while never shooting a 3 and players who listed 0s in nearly every numeric variable. 
+
+```{r}
+#| label: missigness_table
+
+nba_seasons |> 
+  filter(is.na(x3p_percent)) |> 
+  DT::datatable(caption = 'Observations with Missing Values')
+```
 
 
 ## Data source
