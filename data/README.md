@@ -1,9 +1,9 @@
 ## Datasets
 
-Cite and describe datasets ....
+This folder contains cleaned versions of NBA salaries and NBA season statistics datasets. The merging of these two files creates the final dataset. `raw`, which holds the raw data used to create these datasets, is also located in this folder.
 
-`nba_salaries_2020_2022` --> [https://www.espn.com/nba/salaries](https://www.espn.com/nba/salaries)
+- `nba_salaries.rds` --> yearly salary data of NBA players from 1990-2022
 
-`nba_salaries_1996_2019` --> [NBA data from 1996-2021](https://www.kaggle.com/datasets/patrickhallila1994/nba-data-from-basketball-reference)
+- `nba_stats.rds` --> season statistics of  NBA players from 1990-2022
 
-`nba_salaries_1990_2017` --> [NBA - Player Salary (1990-2017)](https://www.kaggle.com/datasets/whitefero/nba-player-salary-19902017?resource=download)
+- `nba_seasons.rds` --> merging of the previous two files and the main dataset of interest
