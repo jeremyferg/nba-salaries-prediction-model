@@ -20,15 +20,6 @@ reference-location: margin
 citation-location: margin
 ---
 
-::: {.callout-important}
-## Memo format
-
-Like all other submissions for this course, we expect the memo to be neat and well organized. This a template to get you started. 
-
-You should make this document your own. To help with this we have added a date to the yaml above (good whenever writing memos). You should remove this block when making this document your own.
-
-:::
-
 ::: {.callout-tip icon=false}
 
 ## Github Repo Link
@@ -37,18 +28,14 @@ You should make this document your own. To help with this we have added a date t
 
 :::
 
-::: {.callout-warning}
-GitHub (free account) cannot store large files. If you try to commit and push a large dataset you will have an ERROR! Any file over 100 MB (100,000 KB) needs to be added to the `.gitignore` file BEFORE committing.
-
-**We may need to do that for files in your final project!**
-:::
-
 ```{r}
 #| label: libraries
 #| echo: false
 
 library(tidyverse)
 library(here)
+library(patchwork)
+library(pracma)
 
 ```
 
@@ -235,23 +222,104 @@ nba_seasons |>
   DT::datatable(caption = 'Observations with Missing Values')
 ```
 
+## Target Variable Analysis
 
-## Data source
+We start the univariate analysis by looking at a histogram of the target variable, `adj_salary`. From the histogram, we can see that the majority of NBA players earn less than five million dollars in a year. The distribution does not seem to have any additional local peaks.
 
-Blah blah blah^[an example of footnote --- [content in margins](https://quarto.org/docs/blog/posts/2022-02-17-advanced-layout/)]
+```{r}
+#| label: adj_sal_histo
 
-## Why this data
+nba_seasons |> 
+  ggplot(aes(adj_salary)) + 
+  geom_histogram(bins = 120, color = 'white') +
+  scale_x_continuous(limits = c(0, 63095401)) +
+  theme_minimal() +
+  labs(title = 'Histogram Distribution of Adjusted Annual NBA Salaries',
+       subtitle = 'Most salaries are less than 5 million dollars',
+       x = 'Adjusted Salary',
+       y = '')
 
-Blah blah blah^[another footnote]
+```
 
-## Data quality & complexity check
+However, our distribution is right skewed. Ideally, we want our outcome variable to have a normal distribution to allow us to apply statistical properties and techniques that require a normality assumption. Reducing skewness will also make predicting values easier in our model. A common transformation for right-skewed data is a log transformation. This transformation will help reduce the skewness and deal with extreme values. The density distribution and boxplot of adjusted salaries gives another perspective of the right-skewness of the data.
 
-Blah blah blah
+```{r}
+#| label: density_boxplot
 
-## Potential data issues
+salary_desnsity_plot <-
+  nba_seasons |> 
+  ggplot(aes(adj_salary)) +
+  geom_density() +
+  theme_minimal() +
+  theme(
+    axis.text.y = element_blank(),
+    axis.title.y = element_blank(),
+    axis.ticks.y = element_blank()
+  )
 
-Blah blah blah
+salary_box_plot <-
+  nba_seasons |> 
+  ggplot(aes(adj_salary)) +
+  geom_boxplot() +
+  theme_void()
 
-## Misc
+# density and boxplot of adjusted salaries
+(salary_box_plot +
+    labs(
+      title = 'Density Distribution and Boxplot of Adjusted Salaries',
+      subtitle = 'These graphs give a better understanding of where the middle-50 lies'
+    ))/salary_desnsity_plot +
+  plot_layout(heights = unit(c(1, 5), c('cm', 'null'))) 
 
-Blah Blah
+```
+
+After using the log transformation, our data looks a little left-skewed. Nevertheless, we have reduced the skewness, allowing for easier analysis.
+
+```{r}
+#| label: density-boxplot-log10
+
+# transforming skew by log base 10
+(salary_box_plot + 
+  labs(
+    title = 'Density Distribution and Boxplot of Adjusted Salaries',
+    subtitle = 'log10 transformation'
+  ))/salary_desnsity_plot +
+  plot_layout(heights = unit(c(1, 5), c('cm', 'null'))) &
+  scale_x_log10(name = 'log10 adj_salary') 
+
+```
+
+If we wanted to reduce the skewness of our data even more, we could consider more uncommon transformations. I found that transforming the outcome variable by the 7th root essentially removes the skewness. This transformation is visualized below.
+
+```{r}
+#| label: density-boxplot-root7
+
+salary_desnsity_plot_root <-
+  nba_seasons |> 
+  ggplot(aes(nthroot(adj_salary, 7))) +
+  geom_density() +
+  theme_minimal() +
+  theme(
+    axis.text.y = element_blank(),
+    axis.title.y = element_blank(),
+    axis.ticks.y = element_blank()
+  )
+
+salary_box_plot_root <-
+  nba_seasons |> 
+  ggplot(aes(nthroot(adj_salary, 7))) +
+  geom_boxplot() +
+  theme_void()
+
+# density and boxplot of adjusted salaries, 7th root transformation
+(salary_box_plot_root +
+    labs(
+      title = 'Density Distribution and Boxplot of Adjusted Salaries',
+      subtitle = 'Root-7 transformation'))/salary_desnsity_plot_root +
+  plot_layout(heights = unit(c(1, 5), c('cm', 'null'))) 
+
+```
+
+While this transformation gives us a distribution close to normal, we also need to consider the interpretability of using this transformation; Explaining the findings of our model to an NBA player or agent with this transformation would be difficult. Therefore, it would be best to settle with a log transformation instead.
+
+
