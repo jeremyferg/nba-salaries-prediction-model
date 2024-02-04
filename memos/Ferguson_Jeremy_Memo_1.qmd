@@ -44,7 +44,7 @@ library(pracma)
 
 This project aims to create a predictive model that can estimate the yearly salaries of professional basketball players from the National Basketball Association (NBA). This model will mainly use season statistics from players as its predictors. Other NBA-related factors, such as the location of the player’s team and how long the player has been in the NBA, will be used for this analysis.
 
-This research question is a regression problem; we are trying to predict salary, a continuous outcome variable. The target variable is `adj_salary`, found in the `nba_seasons` dataset under the `data` folder. This variable measures a player’s yearly salary adjusted to 2023 prices using the [Consumer Price Index for All Urban Consumers from the US Bureau of Labor Statistics.](https://data.bls.gov/timeseries/CUUR0000SA0). 
+This research question is a regression problem; we are trying to predict salary, a continuous outcome variable. The target variable is `adj_salary`, found in the `nba_seasons` dataset under the `data` folder. This variable measures a player’s yearly salary adjusted to 2023 prices using the [Consumer Price Index for All Urban Consumers from the US Bureau of Labor Statistics.](https://www.bls.gov/data/inflation_calculator.htm). 
 
 I see this research most benefiting NBA players. With this model, players would have a better understanding of what they should expect from contract offers based on their previous performance. The model would also help indicate what factors outside of the players’ control, such as what conference a team plays in, contribute towards their salaries.
 

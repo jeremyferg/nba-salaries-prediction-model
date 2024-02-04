@@ -26,4 +26,4 @@ Please note that the nature of Stathead's querying system did not make it possib
 
 ### Misc.
 
-- `cpi_data.csv` --> Consumer Price Index for All Urban Consumers from the [US Bureau of Labor Statistics.](https://data.bls.gov/timeseries/CUUR0000SA0). Used in `nba_seasons.rds` to create the target variable, `adj_salary`
+- `cpi_data.csv` --> Consumer Price Index for All Urban Consumers from the [US Bureau of Labor Statistics.](https://www.bls.gov/data/inflation_calculator.htm). Used in `nba_seasons.rds` to create the target variable, `adj_salary`

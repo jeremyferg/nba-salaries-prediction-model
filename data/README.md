@@ -6,4 +6,4 @@ This folder contains cleaned versions of NBA salaries and NBA season statistics 
 
 - `nba_stats.rds` --> season statistics of  NBA players from 1990-2022
 
-- `nba_seasons.rds` --> merging of the previous two files and the main dataset of interest
+- `nba_seasons.rds` --> merging of the previous two files and is the main dataset of interest
