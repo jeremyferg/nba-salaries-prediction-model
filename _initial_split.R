@@ -32,7 +32,16 @@ nba_seasons <- read_rds(here('data/nba_seasons.rds'))
 
 nba_seasons_log <-
   nba_seasons |> 
-  mutate(adj_salary = log10(adj_salary))
+  mutate(adj_salary = log10(adj_salary),
+         five_years = factor(five_years),
+         ten_years = factor(ten_years),
+         pos = factor(pos),
+         conference = factor(conference),
+         market_size = factor(market_size, ordered = TRUE),
+         playoffs = factor(playoffs),
+         as = factor(as)) |> 
+  rename(all_star = as) |> 
+  filter(!is.na(x2p_percent))
 
 ## split data ##
 
