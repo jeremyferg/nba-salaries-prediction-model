@@ -14,8 +14,12 @@
 library(tidyverse)
 library(tidymodels)
 library(here)
+library(parallel)
 
 tidymodels_prefer()
+
+# parallel processing
+doParallel::registerDoParallel(detectCores(logical = TRUE))
 
 #####################
 ##### Data Sets #####
@@ -49,11 +53,36 @@ null_wflow <-
 null_fit_folds <- 
   fit_resamples(
     null_wflow,
-    resamples = nba_seasons_folds,
+    resamples = nba_seasons_folds_base,
     control = keep_wflow_rsample
   )
 
+## baseline lm model ##
+
+# creating specification
+baseline_spec <-
+  linear_reg() |> 
+  set_engine('lm') |> 
+  set_mode('regression') 
+
+# defining workflow
+baseline_wflow <-
+  workflow() |> 
+  add_model(baseline_spec) |> 
+  add_recipe(nba_recipe_baseline)
+
+# resampling
+baseline_fit_folds <- 
+  fit_resamples(
+    null_wflow,
+    resamples = nba_seasons_folds_base,
+    control = keep_wflow_rsample
+  )
+
+## save out the folds ##
+
 save(null_fit_folds, file = here('results/null_fit_folds.rda'))
+save(baseline_fit_folds, file = here('results/baseline_fit_folds.rda'))
 
 
 

@@ -70,6 +70,6 @@ keep_wflow_rsample <- control_resamples(save_workflow = TRUE)
 write_rds(nba_seasons_splits, file = here("data/splits_folds/nba_seasons_splits.rds"))
 write_rds(nba_seasons_train, file = here("data/splits_folds/nba_seasons_train.rds"))
 write_rds(nba_seasons_test, file = here("data/splits_folds/nba_seasons_test.rds"))
-write_rds(nba_seasons_folds_base, file = here("data/splits_folds/nba_seasons_folds_base.rda"))
+save(nba_seasons_folds_base, file = here("data/splits_folds/nba_seasons_folds_base.rda"))
 save(keep_wflow_rsample, file = here('results/keep_wflow_rsample.rda'))
 
