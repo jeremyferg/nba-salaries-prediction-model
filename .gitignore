@@ -40,4 +40,4 @@
 # the following code in the Terminal:
 # find . -size +100M | sed 's|^\./||g' | cat >> .gitignore; awk '!NF || !seen[$0]++' .gitignore
 
-nba_seasons_folds 
+data/splits_folds/nba_seasons_folds.rda 
