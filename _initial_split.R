@@ -60,16 +60,16 @@ nba_seasons_test <- nba_seasons_splits |> testing()
 
 # this time around, let's keep it simple and use v-fold cross validation
 # let's also say i'm more interested in a estimate with low bias (so high variance)
-nba_seasons_folds <- vfold_cv(nba_seasons_train, v = 8, repeats = 5, strata = adj_salary)
+nba_seasons_folds_base <- vfold_cv(nba_seasons_train, v = 8, repeats = 5, strata = adj_salary)
 
 # set up controls for fitting resamples
-keep_wflow <- control_resamples(save_workflow = TRUE)
+keep_wflow_rsample <- control_resamples(save_workflow = TRUE)
 
 ## save the split, train, and test ##
 
 write_rds(nba_seasons_splits, file = here("data/splits_folds/nba_seasons_splits.rds"))
 write_rds(nba_seasons_train, file = here("data/splits_folds/nba_seasons_train.rds"))
 write_rds(nba_seasons_test, file = here("data/splits_folds/nba_seasons_test.rds"))
-write_rds(nba_seasons_folds, file = here("data/splits_folds/nba_seasons_folds.rda"))
-save(keep_wflow, file = here('results/keep_wflow.rda'))
+write_rds(nba_seasons_folds_base, file = here("data/splits_folds/nba_seasons_folds_base.rda"))
+save(keep_wflow_rsample, file = here('results/keep_wflow_rsample.rda'))
 
