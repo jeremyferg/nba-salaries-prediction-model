@@ -14,6 +14,7 @@
 
 library(tidyverse)
 library(tidymodels)
+library(pracma)
 library(here)
 
 tidymodels_prefer()
@@ -30,9 +31,9 @@ nba_seasons <- read_rds(here('data/nba_seasons.rds'))
 
 ## log_transform adj_salary ##
 
-nba_seasons_log <-
+nba_seasons_nth7 <-
   nba_seasons |> 
-  mutate(adj_salary = log10(adj_salary),
+  mutate(adj_salary = nthroot(adj_salary, 7),
          five_years = factor(five_years),
          ten_years = factor(ten_years),
          pos = factor(pos),
@@ -48,7 +49,7 @@ nba_seasons_log <-
 # set seed
 set.seed(0372)
 nba_seasons_splits <-
-  nba_seasons_log |> 
+  nba_seasons_nth7 |> 
   initial_split(prop = .75, strata = adj_salary)
 
 nba_seasons_train <- nba_seasons_splits |> training()
