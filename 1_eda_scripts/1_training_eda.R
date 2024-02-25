@@ -24,10 +24,34 @@ nba_seasons_train <- read_rds(here('data/splits_folds/nba_seasons_train.rds'))
 ################################################################################
 ################################################################################
 
+## looking into high correlation ##
+
   cor(nba_seasons_train |> 
         select(c(adj_salary, mp:ws)))
 
+# Compute correlation matrix
+correlation_matrix <- cor(nba_seasons_train |> 
+                            select(c(adj_salary, mp:ws)))
 
+# Extract upper triangle of correlation matrix (excluding the diagonal)
+upper_triangle <- upper.tri(correlation_matrix)
+
+# Set a threshold for correlation coefficient
+threshold <- 0.8
+
+# Find pairs of highly correlated variables
+high_correlation <- which(correlation_matrix > threshold & upper_triangle, arr.ind = TRUE)
+
+# Print pairs of highly correlated variables
+for (i in 1:nrow(high_correlation)) {
+  row_index <- high_correlation[i, 1]
+  col_index <- high_correlation[i, 2]
+  cat("Variables:", rownames(correlation_matrix)[row_index], "and", colnames(correlation_matrix)[col_index], "\n")
+  cat("Correlation coefficient:", correlation_matrix[row_index, col_index], "\n\n")
+}
+
+
+## density plot for numeric variables ##
 
 simple_density <- function(var){
   
@@ -80,6 +104,56 @@ simple_density <- function(var){
 
 simple_density(x3p_percent)
 
-nba_seasons_train |> 
-  ggplot(aes(x3p)) +
-  geom_density()
+
+### scatterplot for numeric variables and target  variable 
+
+simple_scatter <- function(some_var){
+  
+  nba_seasons_train |> 
+    ggplot(aes({{some_var}}, adj_salary)) +
+    geom_point(alpha = .2) +
+    geom_smooth() +
+    theme_bw() +
+    labs(
+      title = rlang::englue("Scatterplot of adj_salary and {{some_var}}"),
+      y = '')
+  
+}
+
+simple_scatter(x2p)
+
+### bar plot distributions
+
+simple_barplot <- function(some_var){
+  
+  nba_seasons_train |> 
+    
+    ggplot(aes({{some_var}}, fill = {{some_var}})) +
+    geom_bar() +
+    geom_text(aes(label = ..count..), stat = "count", vjust = 1.5, colour = "white", fontface = "bold") +
+    theme_bw() +
+    labs(
+      title = rlang::englue("Bar plot distribution of {{some_var}}"),
+      y = '')
+    #theme(legend.position = 'none')
+  
+}
+
+simple_barplot(all_star)
+
+
+## box plot for predictor-outcome relationships
+
+simple_boxplot <- function(some_var){
+  
+  nba_seasons_train |> 
+    ggplot(aes({{some_var}}, adj_salary, fill = {{some_var}})) +
+    geom_boxplot() +
+    theme_bw() +
+    labs(
+      title = rlang::englue("Bar plot distribution of {{some_var}}"),
+      y = '')
+  
+}
+
+simple_boxplot(all_star)
