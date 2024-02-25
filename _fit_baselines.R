@@ -74,7 +74,7 @@ baseline_wflow <-
 # resampling
 baseline_fit_folds <- 
   fit_resamples(
-    null_wflow,
+    baseline_wflow,
     resamples = nba_seasons_folds_base,
     control = keep_wflow_rsample
   )
