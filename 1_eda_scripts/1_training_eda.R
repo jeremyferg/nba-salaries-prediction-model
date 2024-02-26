@@ -107,19 +107,37 @@ simple_density(x3p_percent)
 
 ### scatterplot for numeric variables and target  variable 
 
-simple_scatter <- function(some_var){
+simple_scatter <- function(some_var, interact, two = FALSE){
+  
+  if(two == TRUE){
   
   nba_seasons_train |> 
     ggplot(aes({{some_var}}, adj_salary)) +
-    geom_point(alpha = .2) +
-    geom_smooth() +
+    geom_point(alpha = .1) +
+    geom_smooth(aes(color = {{interact}}), se = FALSE, linewidth = 1.5) +
     theme_bw() +
     labs(
       title = rlang::englue("Scatterplot of adj_salary and {{some_var}}"),
+      subtitle = rlang::englue("Grouped by {{interact}}"),
       y = '')
   
+  }
+  
+  else{
+    
+    nba_seasons_train |> 
+      ggplot(aes({{some_var}}, adj_salary)) +
+      geom_point(alpha = .1) +
+      geom_smooth(se = FALSE, linewidth = 1.5) +
+      theme_bw() +
+      labs(
+        title = rlang::englue("Scatterplot of adj_salary and {{some_var}}"),
+        y = '')
+    
+  }
 }
 
+simple_scatter(x2p, all_star, TRUE)
 simple_scatter(x2p)
 
 ### bar plot distributions
@@ -144,16 +162,38 @@ simple_barplot(all_star)
 
 ## box plot for predictor-outcome relationships
 
-simple_boxplot <- function(some_var){
+simple_boxplot <- function(some_var, interact, two = FALSE){
   
-  nba_seasons_train |> 
-    ggplot(aes({{some_var}}, adj_salary, fill = {{some_var}})) +
-    geom_boxplot() +
-    theme_bw() +
-    labs(
-      title = rlang::englue("Bar plot distribution of {{some_var}}"),
-      y = '')
+  if(two == TRUE){
+  
+    nba_seasons_train |> 
+      ggplot(aes({{some_var}}, adj_salary, fill = {{interact}})) +
+      geom_boxplot() +
+      theme_bw() +
+      labs(
+        title = rlang::englue("Bar plot distribution of {{some_var}}"),
+        subtitle = rlang::englue("Grouped by {{interact}}"),
+        y = '')
+    
+  }
+  else{
+    
+    nba_seasons_train |> 
+      ggplot(aes({{some_var}}, adj_salary, fill = {{some_var}})) +
+      geom_boxplot() +
+      theme_bw() +
+      labs(
+        title = rlang::englue("Bar plot distribution of {{some_var}}"),
+        y = '')
+    
+  }
   
 }
 
-simple_boxplot(all_star)
+simple_boxplot(five_years, market_size, TRUE)
+
+
+nba_seasons_train |> 
+  ggplot(aes(all_star, adj_salary, fill = market_size)) +
+  geom_boxplot() +
+  theme_bw() 
