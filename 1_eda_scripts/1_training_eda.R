@@ -137,7 +137,7 @@ simple_scatter <- function(some_var, interact, two = FALSE){
   }
 }
 
-simple_scatter(x2p, all_star, TRUE)
+simple_scatter(fg, all_star, TRUE)
 simple_scatter(x2p)
 
 ### bar plot distributions
@@ -157,7 +157,7 @@ simple_barplot <- function(some_var){
   
 }
 
-simple_barplot(all_star)
+simple_barplot(pos)
 
 
 ## box plot for predictor-outcome relationships
@@ -190,7 +190,7 @@ simple_boxplot <- function(some_var, interact, two = FALSE){
   
 }
 
-simple_boxplot(five_years, market_size, TRUE)
+simple_boxplot(pos, all_star, TRUE)
 
 
 nba_seasons_train |> 

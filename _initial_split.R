@@ -60,7 +60,7 @@ nba_seasons_test <- nba_seasons_splits |> testing()
 
 # this time around, let's keep it simple and use v-fold cross validation
 # let's also say i'm more interested in a estimate with low bias (so high variance)
-nba_seasons_folds_base <- vfold_cv(nba_seasons_train, v = 8, repeats = 5, strata = adj_salary)
+nba_seasons_folds_base <- vfold_cv(nba_seasons_train, v = 10, repeats = 5, strata = adj_salary)
 
 # set up controls for fitting resamples
 keep_wflow_rsample <- control_resamples(save_workflow = TRUE)
