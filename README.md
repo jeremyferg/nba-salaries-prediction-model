@@ -14,4 +14,12 @@ The target variable is `adj_salary`, found in the `nba_seasons.rds` dataset. Thi
 
 - `memos` --> folder containing progress reports for this project
 
+- `project_scripts` --> folder containing all R scripts used for this project
+
+- `recipes` --> folder containing the recipes used to fit and tune the project's models
+
+- `results` --> `folder containing the fit data used for the project's analysis
+
+-
+
 
