@@ -13,6 +13,7 @@
 library(tidyverse)
 library(here)
 library(flextable)
+library(corrr)
 
 #####################
 ##### Data Sets #####
@@ -28,6 +29,13 @@ nba_seasons_train <- read_rds(here('data/splits_folds/nba_seasons_train.rds'))
 
   cor(nba_seasons_train |> 
         select(c(adj_salary, mp:ws)))
+
+# correlation example
+nba_seasons_train |> 
+  select(mp, fg, fga) |> 
+  correlate() |> 
+  knitr::kable()
+
 
 # Compute correlation matrix
 correlation_matrix <- cor(nba_seasons_train |> 
@@ -117,7 +125,7 @@ simple_scatter <- function(some_var, interact, two = FALSE){
     geom_smooth(aes(color = {{interact}}), se = FALSE, linewidth = 1.5) +
     theme_bw() +
     labs(
-      title = rlang::englue("Scatterplot of adj_salary and {{some_var}}"),
+      title = rlang::englue("Scatterplot of adj_salary against {{some_var}}"),
       subtitle = rlang::englue("Grouped by {{interact}}"),
       y = '')
   
@@ -131,14 +139,14 @@ simple_scatter <- function(some_var, interact, two = FALSE){
       geom_smooth(se = FALSE, linewidth = 1.5) +
       theme_bw() +
       labs(
-        title = rlang::englue("Scatterplot of adj_salary and {{some_var}}"),
+        title = rlang::englue("Scatterplot of adj_salary against {{some_var}}"),
         y = '')
     
   }
 }
 
 simple_scatter(fg, all_star, TRUE)
-simple_scatter(x2p)
+simple_scatter(blk)
 
 ### bar plot distributions
 
