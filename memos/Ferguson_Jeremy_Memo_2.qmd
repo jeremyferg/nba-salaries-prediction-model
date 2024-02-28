@@ -1,0 +1,188 @@
+---
+title: "Progress Memo 2"
+subtitle: |
+  | Final Project 
+  | Data Science 2 with R (STAT 301-2)
+author: "Jeremy Ferguson"
+date: today
+
+format:
+  html:
+    toc: true
+    embed-resources: true
+    
+execute:
+  echo: false
+  warning: false
+
+from: markdown+emoji 
+reference-location: margin
+citation-location: margin
+---
+
+::: {.callout-tip icon=false}
+
+## Github Repo Link
+
+[https://github.com/stat301-2-2024-winter/final-project-2-jeremyferg.git](https://github.com/stat301-2-2024-winter/final-project-2-jeremyferg.git)
+
+:::
+
+```{r}
+#| label: libraries and datasets
+#| echo: false
+
+library(tidyverse)
+library(tidymodels)
+library(here)
+library(patchwork)
+library(pracma)
+library(corrr)
+
+tidymodels_prefer()
+
+nba_seasons_train <- read_rds(here('data/splits_folds/nba_seasons_train.rds'))
+
+load(here('results/lm_fit_folds.rda'))
+load(here('results/null_fit_folds.rda'))
+
+```
+
+
+## Assessment Metric
+
+I will use RMSE as an assessment metric for this project. In this regression analysis, I am most concerned about the accuracy of my models’ estimation; I want to be able to predict NBA salaries as closely as possible, as this is the main value a player or agent is concerned with. RMSE also helps to resolve issues with outliers since the metric penalizes these observations. 
+
+## Analysis Plan
+
+### Splitting and Resampling
+
+Before splitting, our data set has 13985 observations. This data set is on the smaller side, so a split should lean more towards having many training observations. Of course, we do not want our model to overfit the training data. I chose to do a .75/.25 training-testing split, as I believed this to be a good median proportion for the data. Our training set has 10440 observations, and our testing set has 3483 observations.
+
+I chose a v-fold cross-validation as my resampling method. The method currently has 10 folds repeated 5 times. So, our model fits on 9396 observations and is assessed on about 1044 observations. I find these numbers to be reasonable; we have a nice number of observations for the model itself and ample observations for assessment. Through data collection, I noticed that each NBA season has about 500 players. So, we can think of this method as assessing with two seasons' worth of players.
+
+### Models
+
+My project will use the null model, linear regression model, elastic net model, random forest model, gradient boosted tree model, neural network regression model, and multivariate adaptive regression splines model. A key reason for my choices was to continuously increase flexibility while examining the change in the interpretability of my results.
+
+#### Baselines
+
+The null and linear regression models are used mainly as a baseline. These models give a simple, trivial result to my data. We can assume that there are complexities in our data that need to be accounted for to produce the best performance metric. However, having baselines gives us a good indication of whether or not our other models are being hurt by complexity. 
+
+#### Elastic Net 
+
+The elastic net model will address some of the high correlation and multicollinearity concerns I have with the data. Many of the predictor variables have high correlations with each other. Here is an example of high correlations between minutes played, field goals made, and field goals attempted:
+
+```{r}
+#| label: high corr
+#| echo: false
+
+# correlations
+nba_seasons_train |> 
+  select(mp, fg, fga) |> 
+  correlate() |> 
+  knitr::kable(caption = 'Examples of high correlation')
+
+```
+
+High correlation can lead to unstable estimates and overfitting in my models, so I must address this issue. Since the elastic net model uses the lasso and ridge techniques to penalize multicollinearity issues, this model is great for my analysis.
+
+#### Random Forest
+
+The random forest model is a nice median between interpretability and flexibility. The model handles overfitting concerns and outliers well. In addition, this model can handle both linear and nonlinear relationships. Exploring the training set, I saw a few predictors that may have a nonlinear relationship with the outcome variable. For example, the blocks predictor does not seem to have a steady, linear trend when plotted against adjusted salaries.
+
+```{r}
+#| label: blk_nonlinear
+#| echo: false
+
+simple_scatter <- function(some_var, interact, two = FALSE){
+  
+  if(two == TRUE){
+  
+  nba_seasons_train |> 
+    ggplot(aes({{some_var}}, adj_salary)) +
+    geom_point(alpha = .1) +
+    geom_smooth(aes(color = {{interact}}), se = FALSE, linewidth = 1.5) +
+    theme_bw() +
+    labs(
+      title = rlang::englue("Scatterplot of adj_salary against {{some_var}}"),
+      subtitle = rlang::englue("Grouped by {{interact}}"),
+      y = '')
+  
+  }
+  
+  else{
+    
+    nba_seasons_train |> 
+      ggplot(aes({{some_var}}, adj_salary)) +
+      geom_point(alpha = .1) +
+      geom_smooth(se = FALSE, linewidth = 1.5) +
+      theme_bw() +
+      labs(
+        title = rlang::englue("Scatterplot of adj_salary against {{some_var}}"),
+        y = '')
+    
+  }
+}
+
+simple_scatter(blk)
+
+```
+
+If these visualizations are truly nonlinear, random forests will handle these relationships with little tuning.
+
+#### Boosted Trees
+
+Boosted trees allow for more complexity in our data compared to random forests, potentially creating more accurate performance metrics. However, the hyperparameters are quite sensitive; It will be important for me to correctly tune this model to achieve a worthwhile result.
+
+#### MARS
+
+I am choosing to try the multivariate adaptive regression splines (MARS) model mainly for its ability to deal with nonlinearity while still having high interpretability compared to other models with a heavy nonlinearity focus. However, if our nonlinear data has many sharp changes (say one of our predictor-outcome relationships exhibits multiple peaks and troughs), the piecewise linear segments that MARS uses to capture its nonlinear relationships may not be accurate.
+
+#### Neural Network 
+
+The neural network regression model will provide more nonlinear flexibility than MARS if the intricacy of our data becomes a problem. While the model can create estimations with high accuracy, this process is very time-consuming, with multiple hyperparameters needing to be tuned. Since our data set is on the smaller side, it may be the case that neural networks actually overfit our data.
+
+### Recipes
+
+I currently have four recipes that I would like to use.
+
+The first recipe will focus on general player statistics, such as points, assists, and rebounds. This will be a simplistic recipe that minimizes the complexity of the modeling process. I imagine we will get fairly reasonable predictions with this recipe, but more complexity will likely improve the results.
+
+The second recipe will place a heavy focus on interaction terms. There are several predictor variables where we may expect differential effects to occur. For example, we may expect someone who averages a high number of assists and a low number of turnovers to have a higher salary than someone who has a high number of assists and a high number of turnovers.
+
+The third recipe focuses on statistical percentages. Instead of using predictors such as field goals made and 3-pointers per game, we will use field goal percentage and 3-point percentage. I expect the results from this recipe to be similar to the first recipe, but it could be the case that many observations with high-volume shooting numbers are not doing so efficiently. This observation should predict lower salaries for these players.
+
+The last recipe places focus on predictors that are not completely in the player’s control, such as their team’s market size, their position, and whether or not their team makes the playoffs. Although they are not directly connected to season statistics, these predictors could easily affect the accuracy of our models. I believe the effect will be generally positive.
+
+## Baseline Model Fits
+
+The results from fitting the null and linear regression model are below. My general statistics recipe was used, although I do not consider this iteration of the recipe to be the finished product. Code for the recipes and fitted models are found in the repository. 
+
+```{r}
+#| label: baseline_fits
+#| echo: false
+
+rbind(
+null_fit_folds |> 
+  collect_metrics() |> 
+  mutate(model = 'Null', .before = .metric),
+
+lm_fit_folds |> 
+  collect_metrics() |> 
+  mutate(model = 'OLS', .before = .metric)
+) |> 
+  select(-c(.estimator, .config)) |> 
+  filter(.metric == 'rmse') |> 
+  knitr::kable(caption = 'Assessment metric of baseline fitted models')
+
+```
+
+We can see that the linear regression has a smaller RMSE estimate and lower variance. Of course, the smaller the RMSE value, the smaller our error is for estimating salaries. So, as expected, linear regression is the winning model in this example.
+
+## Next Steps
+
+The immediate next step will be to complete each recipe and specify values for my models’ tuning parameters. Considering some of my models may take a rather long to to fit, I must finish this step sooner rather than later. I plan to finish these steps by the end of the weekend. After this step comes choosing a winning model and a final model analysis. I plan on including a small EDA for my training set to help explain some of my decisions in the modeling process. I have done some informal exploratory research, and I will most likely sprinkle that analysis into the final report. However, I think an EDA would be a nice addition to the project, especially if I have some extra time.
+
+Overall, I feel confident about the layout of my project. Most of my work has been developing the conceptual tools necessary to implement effective machine learning. My biggest concerns are high correlations and potentially nonlinear relationships, but I have identified techniques that will mitigate these issues. I am not aiming for early submission, but if I stay at this pace, I could easily be done by next week.
+

@@ -21,7 +21,7 @@ tidymodels_prefer()
 ##### Data Sets #####
 #####################
 
-load(here('results/baseline_fit_folds.rda'))
+load(here('results/lm_fit_folds.rda'))
 load(here('results/null_fit_folds.rda'))
 
 ################################################################################
@@ -33,7 +33,7 @@ null_fit_folds |>
   collect_metrics() |> 
   mutate(model = 'Null', .before = .metric),
 
-baseline_fit_folds |> 
+lm_fit_folds |> 
   collect_metrics() |> 
   mutate(model = 'OLS', .before = .metric)
 ) |> 
