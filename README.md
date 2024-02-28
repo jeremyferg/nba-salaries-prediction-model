@@ -6,10 +6,6 @@ The target variable is `adj_salary`, found in the `nba_seasons.rds` dataset. Thi
 
 ## Repo Layout
 
-- `0_data_cleaning_scripts` --> folder containing the R scripts used to clean raw data and create the dataset of interest, `nba_seasons.rds`
-
-- `1_eda_scripts` --> folder containing the R scripts used to perform exploratory data analysis on our main dataset
-
 - `data` --> folder containing used datasets
 
 - `memos` --> folder containing progress reports for this project
@@ -18,8 +14,7 @@ The target variable is `adj_salary`, found in the `nba_seasons.rds` dataset. Thi
 
 - `recipes` --> folder containing the recipes used to fit and tune the project's models
 
-- `results` --> `folder containing the fit data used for the project's analysis
+- `results` --> folder containing the fit data used for the project's analysis
 
--
 
 
