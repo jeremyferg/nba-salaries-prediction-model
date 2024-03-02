@@ -110,7 +110,7 @@ simple_density <- function(var){
 
 }
 
-simple_density(x3p_percent)
+simple_density(e_fg_percent)
 
 
 ### scatterplot for numeric variables and target  variable 
