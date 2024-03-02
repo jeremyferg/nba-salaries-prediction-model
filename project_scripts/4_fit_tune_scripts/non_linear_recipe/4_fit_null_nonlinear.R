@@ -57,7 +57,7 @@ null_fit_folds <-
 
 ## save out the folds ##
 
-save(null_fit_folds, file = here('results/null_fit_folds.rda'))
+save(null_fit_folds, file = here('results/null_fit_folds_nonlinear.rda'))
 
 
 

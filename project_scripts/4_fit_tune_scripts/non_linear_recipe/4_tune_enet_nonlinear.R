@@ -73,4 +73,4 @@ enet_outta_tuned <-
 
 # write out results (fitted/trained workflows) ----
 
-save(enet_outta_tuned, file = here('results/enet_outta_tuned.rda'))
+save(enet_outta_tuned, file = here('results/enet_nonlinear_tuned.rda'))

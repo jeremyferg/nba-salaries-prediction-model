@@ -75,5 +75,5 @@ rf_outta_tuned <-
 
 # write out results (fitted/trained workflows) ----
 
-save(rf_outta_tuned, file = here('results/rf_outta_tuned.rda'))
+save(rf_outta_tuned, file = here('results/rf_nonlinear_tuned.rda'))
 

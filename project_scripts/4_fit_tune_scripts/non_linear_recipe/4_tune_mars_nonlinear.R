@@ -74,4 +74,4 @@ mars_outta_tuned <-
 
 # write out results (fitted/trained workflows) ----
 
-save(mars_outta_tuned, file = here('results/mars_outta_tuned.rda'))
+save(mars_outta_tuned, file = here('results/mars_nonlinear_tuned.rda'))
