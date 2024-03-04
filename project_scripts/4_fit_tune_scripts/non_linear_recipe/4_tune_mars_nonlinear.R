@@ -38,7 +38,7 @@ mars_spec <-
   mars(
     num_terms = tune(),
     prod_degree = tune(),
-    prune_method = 'sequential'
+    prune_method = 'backward'
   ) |> 
   set_engine('earth') |> 
   set_mode('regression') 
@@ -63,7 +63,7 @@ mars_outta_params <- extract_parameter_set_dials(mars_spec) |>
 mars_grid <- grid_regular(mars_outta_params, levels = 5)
 
 # resampling
-set.seed(209349)
+set.seed(359376)
 mars_outta_tuned <- 
   mars_outta_wflow |> 
   tune_grid(
@@ -74,4 +74,4 @@ mars_outta_tuned <-
 
 # write out results (fitted/trained workflows) ----
 
-save(mars_outta_tuned, file = here('results/mars_nonlinear_tuned.rda'))
+save(mars_outta_tuned, file = here('results/nonlinear_recipe/mars_nonlinear_tuned.rda'))

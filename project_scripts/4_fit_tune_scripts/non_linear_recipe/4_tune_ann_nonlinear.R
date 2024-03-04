@@ -75,4 +75,4 @@ ann_outta_tuned <-
 
 # write out results (fitted/trained workflows) ----
 
-save(ann_outta_tuned, file = here('results/ann_nonlinear_tuned.rda'))
+save(ann_outta_tuned, file = here('results/nonlinear_recipe/ann_nonlinear_tuned.rda'))

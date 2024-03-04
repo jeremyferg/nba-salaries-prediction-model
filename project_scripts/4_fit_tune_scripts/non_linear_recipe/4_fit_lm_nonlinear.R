@@ -57,6 +57,6 @@ lm_fit_folds <-
 
 ## save out the folds ##
 
-save(lm_fit_folds, file = here('results/lm_fit_folds_nonlinear.rda'))
+save(lm_fit_folds, file = here('results/nonlinear_recipe/lm_fit_folds_nonlinear.rda'))
 
 

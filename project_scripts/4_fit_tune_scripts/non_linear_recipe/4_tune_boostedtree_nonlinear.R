@@ -77,5 +77,5 @@ bt_outta_tuned <-
 
 # write out results (fitted/trained workflows) ----
 
-save(bt_outta_tuned, file = here('results/bt_nonlinear_tuned.rda'))
+save(bt_outta_tuned, file = here('results/nonlinear_recipe/bt_nonlinear_tuned.rda'))
 
