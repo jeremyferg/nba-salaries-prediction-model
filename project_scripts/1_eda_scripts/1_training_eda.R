@@ -225,8 +225,8 @@ nba_seasons_train |>
   )
 
 nba_seasons_train |> 
-  ggplot(aes(ft_percent, adj_salary)) +
+  ggplot(aes(orb, drb)) +
   geom_point(alpha = .1) +
   geom_smooth()
 
-splines::
+

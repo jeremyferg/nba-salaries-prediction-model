@@ -27,17 +27,17 @@ nba_seasons_train <- read_rds(here('data/splits_folds/nba_seasons_train.rds'))
 ################################################################################
 ################################################################################
 
-## basic recipe ##
+## general recipe ##
 
 # the baseline recipe has 49 predictors
 nba_recipe_general <-
   recipe(adj_salary ~ mp + fg + ft + orb + drb + trb + ast + stl + blk + tov + 
-           pf + pts + pos + g + gs + all_star, 
+           pf + pts + pos + g + gs + all_star + ws, 
          data = nba_seasons_train) |> 
   
   step_dummy(all_nominal_predictors(), one_hot = TRUE) |> 
   step_interact( ~ starts_with('pos_'):starts_with('all_star_')) |> 
-  step_interact( ~ ast:tov + fg:pts) |> 
+  step_interact( ~ ast:tov + fg:pts + mp:pts) |> 
   step_zv(all_predictors()) |> 
   step_normalize(all_numeric_predictors()) |> 
   step_corr(all_predictors(), threshold = .7)
@@ -126,12 +126,52 @@ nba_recipe_outta |>
   bake(new_data = NULL) |> 
   glimpse()
 
+## interact recipe ##
+
+nba_recipe_interact <-
+  recipe(adj_salary ~ five_years + ten_years + market_size + pos + all_star + g 
+         + gs + ast + tov + mp + pts + pf + ws + playoffs + fg + fg_percent +
+           ft + ft_percent + x3p + x3p_percent,
+         data = nba_seasons_train) |> 
+  step_dummy(all_nominal_predictors(), one_hot = TRUE) |> 
+  
+  # omit any 0% (expect 3pt)
+  step_mutate(fg_percent = if_else(fg_percent < .05, NA, fg_percent)) |> 
+  step_mutate(ft_percent = if_else(ft_percent < .05, NA, ft_percent)) |> 
+  step_naomit(c(fg_percent, ft_percent)) |> 
+  
+  # make any 100% just the means
+  step_mutate(fg_percent = if_else(fg_percent > .95, NA, fg_percent)) |> 
+  step_mutate(x3p_percent = if_else(x3p_percent > .95, NA, x3p_percent)) |>
+  step_mutate(ft_percent = if_else(ft_percent > .95, NA, ft_percent)) |> 
+  step_impute_mean(c(fg_percent, x3p_percent, ft_percent)) |> 
+  
+  
+  # interactions #
+  step_interact(~ starts_with('all_star_'):starts_with('market_size_')) |> 
+  step_interact(~ gs:starts_with('five_years_') + gs:starts_with('ten_years_')) |>
+  step_interact(~ g:starts_with('five_years_') + g:starts_with('ten_years_')) |>
+  step_interact(~ starts_with('ten_years_'):starts_with('market_size_')) |> 
+  step_interact(~ gs:starts_with('pos_') + g:starts_with('pos_')) |> 
+  step_interact(~ ws:starts_with('playoffs_')) |> 
+  step_interact(~ ast:tov + mp:pts + mp:pf) |> 
+  step_interact(~ ft:ft_percent + fg:fg_percent + x3p:x3p_percent) |> 
+  
+  step_zv(all_predictors()) |> 
+  step_normalize(all_numeric_predictors()) |> 
+  step_corr(all_predictors(), threshold = .7)
+
+# check recipe
+nba_recipe_interact |> 
+  prep() |> 
+  bake(new_data = NULL) |> 
+  glimpse()
+
+
 ## saving recipe ##
 
 save(nba_recipe_general, file = here('recipes/nba_recipe_general.rda'))
 save(nba_recipe_outta, file = here('recipes/nba_recipe_outta.rda'))
+save(nba_recipe_interact, file = here('recipes/nba_recipe_interact.rda'))
 save(nba_recipe_nonlinear, file = here('recipes/nba_recipe_nonlinear.rda'))
 
-
-#step_mutate(x3p_percent = if_else(is.na(x3p_percent) & !is.na(ft_percent), 0, x3p_percent)) |>
-#step_impute_mean(c(x3p_percent, ft_percent)) |> 
