@@ -57,7 +57,7 @@ mars_outta_params <- extract_parameter_set_dials(mars_spec) |>
   # N:= maximum number of random predictor columns we want to try 
   # should be less than the number of available columns
   update(num_terms = num_terms(range = c(1, 100)),
-         prod_degree = prod_degree(range = c(1, 100)))
+         prod_degree = prod_degree(range = c(1, 1000)))
 
 # build tuning grid
 mars_grid <- grid_regular(mars_outta_params, levels = 5)
