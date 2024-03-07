@@ -79,6 +79,4 @@ rbind(
     mutate(model = 'Random Forest', .before = .metric)
   
 )
-  
-enet_outta_tuned |> collect_metrics(metric = 'rmse') |> 
-  print(n = 50)
+
