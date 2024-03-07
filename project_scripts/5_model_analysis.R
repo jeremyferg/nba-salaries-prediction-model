@@ -116,4 +116,5 @@ rbind(
   
 )
   
-enet_outta_tuned |> show_best(metric = 'rmse')
+enet_outta_tuned |> collect_metrics(metric = 'rmse') |> 
+  print(n = 50)

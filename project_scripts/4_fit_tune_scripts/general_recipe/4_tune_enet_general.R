@@ -56,7 +56,7 @@ enet_outta_params <- extract_parameter_set_dials(enet_spec) |>
   # N:= maximum number of random predictor columns we want to try 
   # should be less than the number of available columns
   update(mixture = mixture(range = c(0, 1)),
-         penalty = penalty(range = c(-100000, 0)))
+         penalty = penalty(range = c(-.5, .5)))
 
 # build tuning grid
 enet_grid <- grid_regular(enet_outta_params, levels = 5)
