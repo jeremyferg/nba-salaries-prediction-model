@@ -44,7 +44,7 @@ mars_spec <-
   set_mode('regression') 
 
 # defining workflow
-mars_outta_wflow <-
+mars_nonlinear_wflow <-
   workflow() |> 
   add_model(mars_spec) |> 
   add_recipe(nba_recipe_nonlinear)
@@ -53,19 +53,19 @@ mars_outta_wflow <-
 extract_parameter_set_dials(mars_spec)
 
 # change hyperparamter ranges
-mars_outta_params <- extract_parameter_set_dials(mars_spec) |> 
+mars_nonlinear_params <- extract_parameter_set_dials(mars_spec) |> 
   # N:= maximum number of random predictor columns we want to try 
   # should be less than the number of available columns
   update(num_terms = num_terms(range = c(1, 100)),
          prod_degree = prod_degree(range = c(1, 1000)))
 
 # build tuning grid
-mars_grid <- grid_regular(mars_outta_params, levels = 5)
+mars_grid <- grid_regular(mars_nonlinear_params, levels = 5)
 
 # resampling
 set.seed(359376)
-mars_outta_tuned <- 
-  mars_outta_wflow |> 
+mars_nonlinear_tuned <- 
+  mars_nonlinear_wflow |> 
   tune_grid(
     nba_seasons_folds_base, 
     grid = mars_grid,
@@ -74,4 +74,4 @@ mars_outta_tuned <-
 
 # write out results (fitted/trained workflows) ----
 
-save(mars_outta_tuned, file = here('results/nonlinear_recipe/mars_nonlinear_tuned.rda'))
+save(mars_nonlinear_tuned, file = here('results/nonlinear_recipe/mars_nonlinear_tuned.rda'))

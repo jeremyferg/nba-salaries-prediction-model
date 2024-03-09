@@ -48,7 +48,7 @@ lm_wflow <-
   add_recipe(nba_recipe_general)
 
 # resampling
-lm_fit_folds <- 
+lm_fit_folds_general <- 
   fit_resamples(
     lm_wflow,
     resamples = nba_seasons_folds_base,
@@ -57,6 +57,6 @@ lm_fit_folds <-
 
 ## save out the folds ##
 
-save(lm_fit_folds, file = here('results/general_recipe/lm_fit_folds_general.rda'))
+save(lm_fit_folds_general, file = here('results/general_recipe/lm_fit_folds_general.rda'))
 
 

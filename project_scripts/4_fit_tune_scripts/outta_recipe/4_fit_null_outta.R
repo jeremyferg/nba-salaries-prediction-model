@@ -48,7 +48,7 @@ null_wflow <-
   add_recipe(nba_recipe_general)
 
 # resampling
-null_fit_folds <- 
+null_fit_folds_outta <- 
   fit_resamples(
     null_wflow,
     resamples = nba_seasons_folds_base,
@@ -57,7 +57,7 @@ null_fit_folds <-
 
 ## save out the folds ##
 
-save(null_fit_folds, file = here('results/outta_recipe/null_fit_folds.rda'))
+save(null_fit_folds_outta, file = here('results/outta_recipe/null_fit_folds_outta.rda'))
 
 
 

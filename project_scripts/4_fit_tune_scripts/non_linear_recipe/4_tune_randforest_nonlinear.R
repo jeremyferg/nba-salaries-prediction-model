@@ -44,7 +44,7 @@ rf_spec <-
   set_engine("ranger")
 
 # define workflows ----
-rf_outta_wflow <- 
+rf_nonlinear_wflow <- 
   workflow() |> 
   add_model(rf_spec) |> 
   add_recipe(nba_recipe_nonlinear)
@@ -53,7 +53,7 @@ rf_outta_wflow <-
 extract_parameter_set_dials(rf_spec)
 
 # change hyperparamter ranges
-rf_outta_params <- extract_parameter_set_dials(rf_spec) |> 
+rf_nonlinear_params <- extract_parameter_set_dials(rf_spec) |> 
   # N:= maximum number of random predictor columns we want to try 
   # should be less than the number of available columns
   update(mtry = mtry(c(1, 15)),
@@ -61,12 +61,12 @@ rf_outta_params <- extract_parameter_set_dials(rf_spec) |>
          trees = trees(range = c(100, 1000))) 
 
 # build tuning grid
-rf_grid <- grid_regular(rf_outta_params, levels = 5)
+rf_grid <- grid_regular(rf_nonlinear_params, levels = 5)
 
 # fit workflows/models ----
 set.seed(572497)
-rf_outta_tuned <- 
-  rf_outta_wflow |> 
+rf_nonlinear_tuned <- 
+  rf_nonlinear_wflow |> 
   tune_grid(
     nba_seasons_folds_base, 
     grid = rf_grid,
@@ -75,5 +75,5 @@ rf_outta_tuned <-
 
 # write out results (fitted/trained workflows) ----
 
-save(rf_outta_tuned, file = here('results/nonlinear_recipe/rf_nonlinear_tuned.rda'))
+save(rf_nonlinear_tuned, file = here('results/nonlinear_recipe/rf_nonlinear_tuned.rda'))
 

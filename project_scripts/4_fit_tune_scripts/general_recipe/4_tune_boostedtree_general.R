@@ -47,7 +47,7 @@ bt_spec <-
   set_engine("xgboost")
 
 # define workflows ----
-bt_outta_wflow <- 
+bt_general_wflow <- 
   workflow() |> 
   add_model(bt_spec) |> 
   add_recipe(nba_recipe_general)
@@ -56,19 +56,19 @@ bt_outta_wflow <-
 
 extract_parameter_set_dials(bt_spec)
 
-bt_outta_params <- extract_parameter_set_dials(bt_spec) |> 
+bt_general_params <- extract_parameter_set_dials(bt_spec) |> 
   update(mtry = mtry(c(1, 15)),
          min_n = min_n(range = c(1, 10)),
          learn_rate = learn_rate(range = c(1/10, 19/20)),
          trees = trees(range = c(100, 1000)))
 
 # build tuning grid
-bt_grid <- grid_regular(bt_outta_params, levels = 5)
+bt_grid <- grid_regular(bt_general_params, levels = 5)
 
 # fit workflows/models ----
 set.seed(57879)
-bt_outta_tuned <- 
-  bt_outta_wflow |> 
+bt_general_tuned <- 
+  bt_general_wflow |> 
   tune_grid(
     nba_seasons_folds_base, 
     grid = bt_grid,
@@ -77,5 +77,5 @@ bt_outta_tuned <-
 
 # write out results (fitted/trained workflows) ----
 
-save(bt_outta_tuned, file = here('results/general_recipe/bt_general_tuned.rda'))
+save(bt_general_tuned, file = here('results/general_recipe/bt_general_tuned.rda'))
 

@@ -44,7 +44,7 @@ ann_spec <-
   set_mode('regression') 
 
 # defining workflow
-ann_outta_wflow <-
+ann_interact_wflow <-
   workflow() |> 
   add_model(ann_spec) |> 
   add_recipe(nba_recipe_interact)
@@ -53,7 +53,7 @@ ann_outta_wflow <-
 extract_parameter_set_dials(ann_spec)
 
 # change hyperparamter ranges
-ann_outta_params <- extract_parameter_set_dials(ann_spec) |> 
+ann_interact_params <- extract_parameter_set_dials(ann_spec) |> 
   # N:= maximum number of random predictor columns we want to try 
   # should be less than the number of available columns
   update(hidden_units = mixture(range = c(0, 5)),
@@ -61,12 +61,12 @@ ann_outta_params <- extract_parameter_set_dials(ann_spec) |>
          epochs = epochs(range = c(100, 750)))
 
 # build tuning grid
-ann_grid <- grid_regular(ann_outta_params, levels = 5)
+ann_grid <- grid_regular(ann_interact_params, levels = 5)
 
 # resampling
 set.seed(56709)
-ann_outta_tuned <- 
-  ann_outta_wflow |> 
+ann_interact_tuned <- 
+  ann_interact_wflow |> 
   tune_grid(
     nba_seasons_folds_base, 
     grid = ann_grid,
@@ -75,4 +75,4 @@ ann_outta_tuned <-
 
 # write out results (fitted/trained workflows) ----
 
-save(ann_outta_tuned, file = here('results/interact_recipe/ann_interact_tuned.rda'))
+save(ann_interact_tuned, file = here('results/interact_recipe/ann_interact_tuned.rda'))

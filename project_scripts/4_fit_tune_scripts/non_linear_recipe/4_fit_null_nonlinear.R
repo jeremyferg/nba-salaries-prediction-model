@@ -48,7 +48,7 @@ null_wflow <-
   add_recipe(nba_recipe_nonlinear)
 
 # resampling
-null_fit_folds <- 
+null_fit_folds_nonlinear <- 
   fit_resamples(
     null_wflow,
     resamples = nba_seasons_folds_base,
@@ -57,7 +57,7 @@ null_fit_folds <-
 
 ## save out the folds ##
 
-save(null_fit_folds, file = here('results/nonlinear_recipe/null_fit_folds_nonlinear.rda'))
+save(null_fit_folds_nonlinear, file = here('results/nonlinear_recipe/null_fit_folds_nonlinear.rda'))
 
 
 
