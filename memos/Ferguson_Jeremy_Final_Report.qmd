@@ -45,6 +45,12 @@ tidymodels_prefer()
 nba_seasons <- read_rds(here('data/nba_seasons.rds'))
 nba_seasons_train <- read_rds(here('data/splits_folds/nba_seasons_train.rds'))
 
+# recipes
+load(here('recipes/nba_recipe_general.rda'))
+load(here('recipes/nba_recipe_outta.rda'))
+load(here('recipes/nba_recipe_interact.rda'))
+load(here('recipes/nba_recipe_nonlinear.rda'))
+
 load(here('results/general_recipe/lm_fit_folds_general.rda'))
 load(here('results/general_recipe/null_fit_folds_general.rda'))
 
@@ -200,5 +206,184 @@ salary_box_plot_root <-
 
 
 While this transformation gives us a distribution close to normal, we also need to consider the interpretability of using this transformation; Explaining the findings of our model to an NBA player or agent with this transformation would be difficult. However, interpretability should not be a large concern for us since we can transform the results of our model back to conventional units. Therefore, with the desire for normality in mind, I decided to transform adjusted salaries by the 7th root.
+
+# Methods
+
+Again, this prediction model is a regression problem. I use RMSE as an assessment metric for this project. In this regression analysis, I am most concerned about the accuracy of my models’ estimation; I want to be able to predict NBA salaries as closely as possible, as this is the main value a player or agent is concerned with. RMSE also helps to resolve issues with outliers since the metric penalizes these observations. 
+
+## Data Splitting
+Before splitting, our data set has 13985 observations. This data set is on the smaller side, so a split should lean more towards having many training observations. Of course, we do not want our model to overfit the training data. I chose to do a .75/.25 training-testing split, as I believed this to be a good median proportion for the data. Our training set has 10440 observations, and our testing set has 3483 observations.
+
+## Resampling Technique
+I chose a v-fold cross-validation as my resampling method. The method has 10 folds repeated 5 times. I chose to use 10 folds to allow for an equilibrium between bias and variance. Again, given our data set is on the smaller side, it is not necessary to explore a larger amount of folds, as a higher value would likely create a very high variance. Repeating 5 times allows us to diminish the noisiness of our data. This technique is particularly useful for the standard errors’ accuracy within our performance metric. 
+
+When folding, our model fits on 9396 observations and is assessed on about 1044 observations. I find these numbers to be reasonable; we have a nice number of observations for the model itself and ample observations for assessment. Through data collection, I noticed that each NBA season has about 500 players. So, we can think of this method as assessing with two seasons' worth of players.
+
+## Model Types
+
+My project will use the null model, linear regression model, elastic net model, random forest model, gradient boosted tree model, neural network regression model, and multivariate adaptive regression splines model. A key reason for my choices was to continuously increase flexibility while examining the change in the interpretability of my results. Also, many of the predictor variables have high correlations with each other. A few examples of these correlations are seen in @tbl-high-corr:
+
+```{r}
+#| label: tbl-high-corr
+#| tbl-cap: 'Examples of high correlation'
+
+nba_seasons_train |> 
+  select(mp, fg, fga) |> 
+  correlate() |> 
+  knitr::kable()
+
+```
+
+High correlation can lead to unstable estimates and overfitting in my models, so I address this issue through my choices of methodology. An expanded analysis of this observation can be found in the EDA portion of the appendix.
+
+### Null and Linear
+The null and linear regression models are used mainly as a baseline. These models give a simple, trivial result to my data. We can assume that there are complexities in our data that need to be accounted for to produce the best performance metric. However, having baselines gives us a good indication of whether or not our other models are being hurt by complexity.
+
+Keeping in mind the simplicity of the models, the null and linear regression models do not have hyperparameters to tune. 
+
+### Elastic Net
+
+The elastic net model will address some of the high correlation and multicollinearity concerns I have with the data; Since the elastic net model uses the lasso and ridge techniques to penalize multicollinearity issues, this model is great for my analysis. 
+
+I will tune two hyperparameters for this model. The mixture hyperparameter allows us to test different proportional combinations of the lasso and ridge techniques used for penalization. The penalty hyperparameter allows us to vary the punishment a model incurs for multicollinearity issues.
+
+### Random Forest
+
+The random forest model is a nice median between interpretability and flexibility. The model handles overfitting concerns and outliers well. In addition, this model can handle both linear and nonlinear relationships. Exploring the training set, I saw a few predictors that may have a nonlinear relationship with the outcome variable. For example, @fig-block-nonlinear shows that the blocks predictor does not seem to have a steady, linear trend.
+
+```{r}
+#| label: fig-block-nonlinear
+
+simple_scatter <- function(some_var, interact, two = FALSE){
+  
+  if(two == TRUE){
+  
+  nba_seasons_train |> 
+    ggplot(aes({{some_var}}, adj_salary)) +
+    geom_point(alpha = .1) +
+    geom_smooth(aes(color = {{interact}}), se = FALSE, linewidth = 1.5) +
+    theme_bw() +
+    labs(
+      title = rlang::englue("Scatterplot of adj_salary against {{some_var}}"),
+      subtitle = rlang::englue("Grouped by {{interact}}"),
+      y = '')
+  
+  }
+  
+  else{
+    
+    nba_seasons_train |> 
+      ggplot(aes({{some_var}}, adj_salary)) +
+      geom_point(alpha = .1) +
+      geom_smooth(se = FALSE, linewidth = 1.5) +
+      theme_bw() +
+      labs(
+        title = rlang::englue("Scatterplot of adj_salary against {{some_var}}"),
+        y = '')
+    
+  }
+}
+
+simple_scatter(blk)
+
+```
+
+More examples are found in the EDA. If these visualizations are truly nonlinear, random forests will handle these relationships with little tuning. Concerning tuning, I vary three hyperparameters. First, I vary the number of predictors used for each decision tree. It is important to keep in mind that lower values of this hyperparameter could cause overfitting. Next, I tune the number of decision trees used in the prediction model. Allowing for a larger amount of trees should lead to more robust predictions at the cost of longer computation times. Finally, I vary the minimum number of nodes needed in each node. It is best to keep this value on the lower side, as lower values lead to more complexity required to capture the patterns of our data.
+
+### Gradient Boosted Tree
+
+Boosted trees allow for more complexity in our data than random forests, potentially creating more accurate performance metrics. However, the hyperparameters are quite sensitive; If the parameters are not tuned correctly, the results will not be worthwhile. This model will tune the same hyperparameters as in the random forest model. Additionally, boosted trees tunes the rate at which the model learns from previous iterations of itself. Using a lower value for this hyperparameter decreases the chance of overfitting since the weights of each tree are smaller. However, a lower value means a higher number of trees to achieve robust results.
+
+### MARS
+
+I am choosing to try the multivariate adaptive regression splines (MARS) model mainly for its ability to deal with nonlinearity while still having high interpretability compared to other models with a heavy nonlinearity focus. However, if our nonlinear data has many sharp changes (say one of our predictor-outcome relationships exhibits multiple peaks and troughs), the piecewise linear segments that MARS uses to capture its nonlinear relationships may not be accurate.
+
+For this model, I am tuning two hyperparameters. The first parameter varies the number of terms that are used in the final prediction model. Increasing this value can allow us to capture more complexity. However, increasing this number too much will result in overfitting. The second hyperparameter varies the degree of the interaction term in the model. Similar to the first parameter, increasing the allowed degrees helps with capturing complexities in the model at the cost of potentially overfitting.
+
+### Neural Network
+The neural network regression model will provide more nonlinear flexibility than MARS if the intricacy of our data becomes a problem. While the model can create estimations with high accuracy, this process is very time-consuming, with multiple hyperparameters needing to be tuned. Since our data set is on the smaller side, it may be the case that neural networks actually overfit our data.
+
+Three hyperparameters are tuned for this model. First, we vary the weight decay of the model, with higher weights preventing the model from learning overly complex patterns that are specific to the training set. Next, we adjust the number of neurons used in each layer of the model, with more neurons leading to more complexity and more potential for overfitting. Finally, we modify the number of training iterations on the entire training set that the model performs. Following the same pattern as the previous hyperparameters, larger values mean more complexity but more potential for overfitting.
+
+## Recipes
+
+For this project, I use four separate recipes to conclude the best-performing model. I want to examine how well various predictors and techniques do for estimating salaries. Here, I give explanations for my recipe decisions.
+
+For all recipes, predictors with zero variance were removed. A predictor with zero variance has no distinguishing factor between observations, therefore not positively contributing to the recipe. To place all predictors on the same scale, we normalize the predictors. Also, we drop predictors that have high correlations with other predictors. Again, high correlations can lead to multicollinearity, resulting in overfitting of the model. In general, [correlations over .7 are considered high](https://www.westga.edu/academics/research/vrc/assets/docs/scatterplots_and_correlation_notes.pdf), so we remove any predictors that have correlations above this threshold.
+
+### General
+
+The first recipe focuses on general player statistics, such as points, assists, and rebounds. These are the predictors that average person thinks of when they imagine basketball statistics. This recipe is simplistic and minimizes the complexity of the modeling process; Only a handful of interaction terms are used and no nonlinear trends are addressed. I imagine we will get fairly reasonable predictions with this recipe, but more complexity will likely improve the results. After removing high correlations and zero-variance predictors, we end up with 21 predictors in this recipe. @tbl-gen-rec shows the predictors that end up used in this recipe:
+
+```{r}
+#| label: tbl-gen-rec
+#| tbl-cap: Predictors for general recipe
+
+nba_recipe_general |> 
+  prep() |> 
+  bake(new_data = NULL) |> 
+  DT::datatable()
+
+```
+
+### Interaction
+
+The second recipe will place a heavy focus on interaction terms. There are several predictor variables where we may expect differential effects to occur. For example, @fig-gs-ten-inter visualizes that there is a positive correlation between games started and salaries. Moreover, players who have been in the NBA for 10 or more years have higher salaries at every level along the x-axis. So, we should create a predictor that is the interaction between games played and whether a player has been in the NBA for 10 or more years.
+
+```{r}
+#| label: fig-gs-ten-inter
+
+simple_scatter(gs, ten_years, TRUE)
+
+```
+
+Another key difference between this recipe and the general recipe is the use of percentage variables. For example, instead of using the variable for field goals, I use the variable for field-goal percentage. Here, I am trying to see if differing the form of the variable changes the outcome of the model. I do not expect this change to have significant effects, as we can find these types of variables through combinations of other variables. All in all, the interactions recipe has 33 predictors, as seen in @tbl-inter-rec.
+
+```{r}
+#| label: tbl-inter-rec
+#| tbl-cap: Predictors for interaction recipe
+
+nba_recipe_interact |> 
+  prep() |> 
+  bake(new_data = NULL) |> 
+  DT::datatable()
+
+```
+
+
+### Nonlinear
+
+The third recipe decreases the number of interaction terms used and adds nonlinearity complexity. While few, there are predictors that seem to exhibit some nonlinear trends in their distribution, as shown in @fig-block-nonlinear. While the nonlinearity is not extreme, I believe the trend is significant enough to merit a recipe that focuses specifically on this aspect of the data. 
+
+Like the interaction recipe, the nonlinear recipe uses statistical percentages in replace of the general predictors when appropriate. The nonlinear recipe has 40 predictors, as seen in @tbl-non-rec.
+
+```{r}
+#| label: tbl-non-rec
+#| tbl-cap: Predictors for nonlinear recipe
+
+nba_recipe_nonlinear |> 
+  prep() |> 
+  bake(new_data = NULL) |> 
+  DT::datatable()
+
+```
+
+### Out-of-Control
+
+The last recipe places focus on predictors that are not completely in the player’s control, such as their team’s market size, their position, and whether or not their team makes the playoffs. Much of my reasoning for creating this recipe comes less from data exploration and more from personal theories. Although they are not directly connected to season statistics, these predictors could easily affect the accuracy of our models. It could be the case that a player who signs a contract for the New York Knicks should expect a much higher salary than if they signed for the San Antonio Spurs. This effect may simply be due to the differences in cost-of-living between various market sizes. It may also be the case that organizations in larger markets are wealthy and therefore can sign players at a market-premium.
+
+This recipe maximizes predictors not necessarily in the control of the players and minimizes variables that are, like points, assists, etc. Neither the percentage nor non-percentage statistics are used to emphasize this minimization. The out-of-control recipe has 29 predictors, as seen in @tbl-outta-rec.
+
+```{r}
+#| label: tbl-outta-rec
+#| tbl-cap: Predictors for out-of-control recipe
+
+nba_recipe_outta |> 
+  prep() |> 
+  bake(new_data = NULL) |> 
+  DT::datatable()
+
+```
+
 
 
