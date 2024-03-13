@@ -1,0 +1,204 @@
+---
+title: "Final Report"
+subtitle: |
+  | Final Project 
+  | Data Science 2 with R (STAT 301-2)
+author: "Jeremy Ferguson"
+date: today
+
+format:
+  html:
+    toc: true
+    embed-resources: true
+    
+execute:
+  echo: false
+  warning: false
+
+from: markdown+emoji 
+reference-location: margin
+citation-location: margin
+---
+
+::: {.callout-tip icon=false}
+
+## Github Repo Link
+
+[https://github.com/stat301-2-2024-winter/final-project-2-jeremyferg.git](https://github.com/stat301-2-2024-winter/final-project-2-jeremyferg.git)
+
+:::
+
+```{r}
+#| label: libraries and datasets
+#| echo: false
+
+library(tidyverse)
+library(tidymodels)
+library(here)
+library(patchwork)
+library(flextable)
+library(pracma)
+library(corrr)
+
+tidymodels_prefer()
+
+nba_seasons <- read_rds(here('data/nba_seasons.rds'))
+nba_seasons_train <- read_rds(here('data/splits_folds/nba_seasons_train.rds'))
+
+load(here('results/general_recipe/lm_fit_folds_general.rda'))
+load(here('results/general_recipe/null_fit_folds_general.rda'))
+
+```
+
+
+# Introduction
+
+This project aims to create a predictive model that can estimate the yearly salaries of professional basketball players from the National Basketball Association (NBA). This model uses season statistics from players as its predictors. Other NBA-related factors, such as the location of the player’s team and how long the player has been in the NBA, are also used for the analysis.
+
+This research question is a regression problem: we are trying to predict salary, a continuous outcome variable. Since we are comparing salaries across several decades, we need to make sure our measurements use one inflation rate. Therefore the target variable measures a player’s yearly salary adjusted to 2023 prices using the [Consumer Price Index for All Urban Consumers from the US Bureau of Labor Statistics.](https://data.bls.gov/pdq/SurveyOutputServlet). 
+
+I see this research most benefiting NBA players. With this model, players would have a better understanding of what they should expect from contract offers based on their previous performance. The model also helps indicate what factors outside of the players’ control, such as what conference a team plays in, contribute towards their salaries. 
+
+Besides its player-specific benefits, this model allows me to explore the NBA computationally. I am a great fan of the NBA (especially my hometown Chicago Bulls), so creating this model has been fun and informative of historical season statistics. Observing what statistics are highly valued when a contract is devised also gives me a deeper understanding of how organizations form championship-contending teams.
+
+# Data Overview
+
+Before proceeding to methodologies, it is important to check the quality of our data. Doing so will clearly lay out concerns we have about the raw data, driving how recipes, model comparison, and tuning parameters are selected and modified. Below, I use the entire dataset to explore missing values and our target variable.
+
+## Missingness
+
+@tbl-missing presents the number and percent of missingness for each variable. We can see that all missing observations come from the `_percent` variables. These are variables that measure the shooting percentages of players.
+
+```{r}
+#| label: tbl-missing
+#| tbl-cap: Missingness in dataset
+
+nba_seasons |> 
+  naniar::miss_var_summary() |> 
+  DT::datatable()
+
+```
+
+
+We can interpret this missingness as players who never took a 2-point shot, 3-point shot, or either during a season. The 3-point shot missingness does not bother me since historically players have contributed greatly to a team while never taking a 3-point shot in a season. For example, [during his MVP season in 1999-2000](https://www.basketball-reference.com/players/o/onealsh01/gamelog/2000), center Shaquille O’Neal did not attempt a single 3-point shot in the regular season or during the Los Angeles Lakers’ championship playoff run. These NAs can be replaced with 0s. We can identify players who contributed greatly to their team without shooting a 3 by filtering observations who only have missingness in the 3-point percentage category.
+
+Those without a 2-point attempt or free-throw attempt concern me, as these players also have 0 or near 0 statistics for every other numerical predictor. @tbl-missing-fg gives a sample of the lack of data for observations in this group. 
+
+```{r}
+#| label: tbl-missing-fg
+#| tbl-cap: Sample of those missing field-goal percentages in data
+
+nba_seasons |> 
+  filter(is.na(fg_percent)) |> 
+  slice_head(n = 10) |> 
+  DT::datatable()
+
+```
+
+
+It does not make sense to include these observations in recipes since their values are not a strong representation of how statistics change salaries. Also considering that these observations make up a small part of the dataset, the best choice is to drop them from the dataset.
+
+## Target Variable Exploration
+
+We start the univariate analysis of our target variable by looking at a histogram of adjusted salaries. @fig-target-histo shows this distribution. From the histogram, we can see that the majority of NBA players earn less than five million dollars in a year. The distribution does not seem to have any additional local peaks. 
+
+```{r}
+#| label: fig-target-histo
+
+nba_seasons |> 
+  ggplot(aes(adj_salary)) + 
+  geom_histogram(bins = 120, color = 'white') +
+  scale_x_continuous(limits = c(0, 63095401)) +
+  theme_minimal() +
+  labs(title = 'Histogram Distribution of Adjusted Annual NBA Salaries',
+       subtitle = 'Most salaries are less than 5 million dollars',
+       x = 'Adjusted Salary',
+       y = '')
+
+```
+
+
+However, our distribution is right skewed. Ideally, we want our outcome variable to have a normal distribution to allow us to apply statistical properties and techniques that require a normality assumption. Reducing skewness will also make predicting values easier in our model. A common transformation for right-skewed data is a log transformation. This transformation will help reduce the skewness and deal with extreme values. The density distribution and boxp lot of adjusted salaries in @fig-target-dens-box give another perspective of the right-skewness of the data.
+
+```{r}
+#| label: fig-target-dens-box
+
+salary_desnsity_plot <-
+  nba_seasons |> 
+  ggplot(aes(adj_salary)) +
+  geom_density() +
+  theme_minimal() +
+  theme(
+    axis.text.y = element_blank(),
+    axis.title.y = element_blank(),
+    axis.ticks.y = element_blank()
+  )
+
+salary_box_plot <-
+  nba_seasons |> 
+  ggplot(aes(adj_salary)) +
+  geom_boxplot() +
+  theme_void()
+
+# density and boxplot of adjusted salaries
+(salary_box_plot +
+    labs(
+      title = 'Density Distribution and Boxplot of Adjusted Salaries',
+      subtitle = 'These graphs give a better understanding of where the middle-50 lies'
+    ))/salary_desnsity_plot +
+  plot_layout(heights = unit(c(1, 5), c('cm', 'null'))) 
+
+```
+
+
+After using the log transformation, our data looks a little left-skewed. Nevertheless, we have reduced the skewness, allowing for easier analysis. @fig-log-dens shows this left-skewness.
+
+```{r}
+#| label: fig-log-dens
+
+(salary_box_plot + 
+  labs(
+    title = 'Density Distribution and Boxplot of Adjusted Salaries',
+    subtitle = 'log10 transformation'
+  ))/salary_desnsity_plot +
+  plot_layout(heights = unit(c(1, 5), c('cm', 'null'))) &
+  scale_x_log10(name = 'log10 adj_salary') 
+
+```
+
+
+We can reduce the skewness of our data even more by considering a more uncommon transformation. I found that transforming the outcome variable by the 7th root essentially removes the skewness. This transformation is visualized in @fig-nth7-dense.
+
+```{r}
+#| label: fig-nth7-dense
+
+salary_desnsity_plot_root <-
+  nba_seasons |> 
+  ggplot(aes(nthroot(adj_salary, 7))) +
+  geom_density() +
+  theme_minimal() +
+  theme(
+    axis.text.y = element_blank(),
+    axis.title.y = element_blank(),
+    axis.ticks.y = element_blank()
+  )
+
+salary_box_plot_root <-
+  nba_seasons |> 
+  ggplot(aes(nthroot(adj_salary, 7))) +
+  geom_boxplot() +
+  theme_void()
+
+# density and boxplot of adjusted salaries, 7th root transformation
+(salary_box_plot_root +
+    labs(
+      title = 'Density Distribution and Boxplot of Adjusted Salaries',
+      subtitle = 'Root-7 transformation'))/salary_desnsity_plot_root +
+  plot_layout(heights = unit(c(1, 5), c('cm', 'null'))) 
+
+```
+
+
+While this transformation gives us a distribution close to normal, we also need to consider the interpretability of using this transformation; Explaining the findings of our model to an NBA player or agent with this transformation would be difficult. However, interpretability should not be a large concern for us since we can transform the results of our model back to conventional units. Therefore, with the desire for normality in mind, I decided to transform adjusted salaries by the 7th root.
+
+
