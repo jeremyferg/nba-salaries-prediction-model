@@ -56,8 +56,8 @@ extract_parameter_set_dials(mars_spec)
 mars_general_params <- extract_parameter_set_dials(mars_spec) |> 
   # N:= maximum number of random predictor columns we want to try 
   # should be less than the number of available columns
-  update(num_terms = num_terms(range = c(1, 100)),
-         prod_degree = prod_degree(range = c(1, 1000)))
+  update(num_terms = num_terms(range = c(1, 50)),
+         prod_degree = prod_degree(range = c(1, 5)))
 
 # build tuning grid
 mars_grid <- grid_regular(mars_general_params, levels = 5)
@@ -75,3 +75,4 @@ mars_general_tuned <-
 # write out results (fitted/trained workflows) ----
 
 save(mars_general_tuned, file = here('results/general_recipe/mars_general_tuned.rda'))
+
