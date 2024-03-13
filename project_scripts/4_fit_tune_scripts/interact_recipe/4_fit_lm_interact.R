@@ -1,7 +1,7 @@
 ##################################################
 ##################################################
 #######                                   ########
-######      FIT LINEAR MODEL NONLINEAR     #######
+######      FIT LINEAR MODEL INTERACT      #######
 #######                                   ########
 ##################################################
 ##################################################
@@ -35,13 +35,13 @@ load(here('results/keep_wflow_rsample.rda'))
 
 ## lm model ##
 
-# creating specification
+# creating specification ----
 lm_spec <-
   linear_reg() |> 
   set_engine('lm') |> 
   set_mode('regression') 
 
-# defining workflow
+# defining workflow ----
 lm_wflow <-
   workflow() |> 
   add_model(lm_spec) |> 
@@ -55,8 +55,12 @@ lm_fit_folds_interact <-
     control = keep_wflow_rsample
   )
 
-## save out the folds ##
+## save out the folds ----
 
 save(lm_fit_folds_interact, file = here('results/interact_recipe/lm_fit_folds_interact.rda'))
 
-
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################

@@ -27,9 +27,8 @@ nba_seasons_train <- read_rds(here('data/splits_folds/nba_seasons_train.rds'))
 ################################################################################
 ################################################################################
 
-## general recipe ##
+## general recipe  ----
 
-# the baseline recipe has 49 predictors
 nba_recipe_general <-
   recipe(adj_salary ~ mp + fg + ft + orb + drb + trb + ast + stl + blk + tov + 
            pf + pts + pos + g + gs + all_star + ws, 
@@ -48,7 +47,7 @@ nba_recipe_general |>
   bake(new_data = NULL) |> 
   glimpse()
 
-## nonlinear recipe ##
+## nonlinear recipe ----
 
 # orb --> 8 DoF
 # ast --> 4 DoF
@@ -102,13 +101,15 @@ nba_recipe_nonlinear |>
   glimpse()
 
 
-## out of control recipe ##
+## out of control recipe ----
 
 nba_recipe_outta <-
   recipe(adj_salary ~ years_in_league + five_years + ten_years + market_size + 
            playoffs + conference + pos + all_star + g + gs + mp,
          data = nba_seasons_train) |> 
   step_dummy(all_nominal_predictors(), one_hot = TRUE) |> 
+  
+  # step interactions
   step_interact(~ starts_with('all_star_'):starts_with('market_size_')) |> 
   step_interact(~ gs:starts_with('five_years_')) |>
   step_interact(~ gs:starts_with('ten_years_')) |> 
@@ -116,6 +117,7 @@ nba_recipe_outta <-
   step_interact(~ g:starts_with('ten_years_')) |> 
   step_interact(~ starts_with('ten_years_'):starts_with('market_size_')) |> 
   step_interact(~ gs:starts_with('pos_')) |> 
+  
   step_zv(all_predictors()) |> 
   step_normalize(all_numeric_predictors()) |> 
   step_corr(all_predictors(), threshold = .7)
@@ -126,7 +128,7 @@ nba_recipe_outta |>
   bake(new_data = NULL) |> 
   glimpse()
 
-## interact recipe ##
+## interact recipe ----
 
 nba_recipe_interact <-
   recipe(adj_salary ~ five_years + ten_years + market_size + pos + all_star + g 
@@ -168,10 +170,17 @@ nba_recipe_interact |>
   glimpse()
 
 
-## saving recipe ##
+## saving recipe ----
 
 save(nba_recipe_general, file = here('recipes/nba_recipe_general.rda'))
 save(nba_recipe_outta, file = here('recipes/nba_recipe_outta.rda'))
 save(nba_recipe_interact, file = here('recipes/nba_recipe_interact.rda'))
 save(nba_recipe_nonlinear, file = here('recipes/nba_recipe_nonlinear.rda'))
+
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+
 

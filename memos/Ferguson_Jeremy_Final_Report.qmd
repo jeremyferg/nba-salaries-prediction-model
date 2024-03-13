@@ -429,7 +429,6 @@ enet_outta_tuned |>
 
 ```
 
-
 @tbl-nnet-inter, @tbl-nnet-non, and @tbl-nnet-outta shows the elastic net model using the interaction recipe, nonlinear recipe, and out-of-control recipes, respectfully. We can see that each of these recipes use the same combination of optimal hyperparameters as @tbl-nnet-gen. We can conclude that the hyperparameters do not have varying effects on the elastic net model when changing recipes. However, each of these recipes perform better than the general recipe; The nonlinear model gives a mean of 1.20 and the other two recipes give a mean of 1.11 (though the standard error of the interaction recipe is slightly smaller).
 
 ```{r}
@@ -1017,7 +1016,7 @@ simple_boxplot <- function(some_var, interact, two = FALSE){
       geom_boxplot() +
       theme_bw() +
       labs(
-        title = rlang::englue("Bar plot distribution of {{some_var}}"),
+        title = rlang::englue("Box plot distribution of {{some_var}}"),
         subtitle = rlang::englue("Grouped by {{interact}}"),
         y = '')
     
@@ -1029,7 +1028,7 @@ simple_boxplot <- function(some_var, interact, two = FALSE){
       geom_boxplot() +
       theme_bw() +
       labs(
-        title = rlang::englue("Bar plot distribution of {{some_var}}"),
+        title = rlang::englue("Box plot distribution of {{some_var}}"),
         y = '')
     
   }

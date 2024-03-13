@@ -173,7 +173,7 @@ simple_boxplot <- function(some_var, interact, two = FALSE){
       geom_boxplot() +
       theme_bw() +
       labs(
-        title = rlang::englue("Bar plot distribution of {{some_var}}"),
+        title = rlang::englue("Box plot distribution of {{some_var}}"),
         subtitle = rlang::englue("Grouped by {{interact}}"),
         y = '')
     
@@ -185,7 +185,7 @@ simple_boxplot <- function(some_var, interact, two = FALSE){
       geom_boxplot() +
       theme_bw() +
       labs(
-        title = rlang::englue("Bar plot distribution of {{some_var}}"),
+        title = rlang::englue("Box plot distribution of {{some_var}}"),
         y = '')
     
   }
@@ -243,3 +243,9 @@ nba_seasons_train |>
 simple_density(x3p_percent)
 #figure10
 simple_density(e_fg_percent)
+
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################

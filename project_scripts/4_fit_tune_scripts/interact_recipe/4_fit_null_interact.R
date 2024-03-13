@@ -1,7 +1,7 @@
 ###############################################
 ###############################################
 #######                                ########
-######      FIT NULL MODEL NONLINEAR    #######
+######      FIT NULL MODEL INTERACT     #######
 #######                                ########
 ###############################################
 ###############################################
@@ -35,13 +35,13 @@ load(here('results/keep_wflow_rsample.rda'))
 
 ## null model ##
 
-# creating specification
+# creating specification ----
 null_spec <-
   null_model() |> 
   set_engine('parsnip') |> 
   set_mode('regression') 
 
-# defining workflow
+# defining workflow ----
 null_wflow <-
   workflow() |> 
   add_model(null_spec) |> 
@@ -55,9 +55,14 @@ null_fit_folds_interact <-
     control = keep_wflow_rsample
   )
 
-## save out the folds ##
+## save out the folds ----
 
 save(null_fit_folds_interact, file = here('results/interact_recipe/null_fit_folds_interact.rda'))
 
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
 
 
