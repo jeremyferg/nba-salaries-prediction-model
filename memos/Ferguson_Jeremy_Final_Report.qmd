@@ -293,7 +293,7 @@ simple_scatter(blk)
 
 ```
 
-More examples are found in the EDA. If these visualizations are truly nonlinear, random forests will handle these relationships with little tuning. Concerning tuning, I vary three hyperparameters. First, I vary the number of predictors used for each decision tree. It is important to keep in mind that lower values of this hyperparameter could cause overfitting. Next, I tune the number of decision trees used in the prediction model. Allowing for a larger amount of trees should lead to more robust predictions at the cost of longer computation times. Finally, I vary the minimum number of nodes needed in each node. It is best to keep this value on the lower side, as lower values lead to more complexity required to capture the patterns of our data.
+If these visualizations are truly nonlinear, random forests will handle these relationships with little tuning. Concerning tuning, I vary three hyperparameters. First, I vary the number of predictors used for each decision tree. It is important to keep in mind that lower values of this hyperparameter could cause overfitting. Next, I tune the number of decision trees used in the prediction model. Allowing for a larger amount of trees should lead to more robust predictions at the cost of longer computation times. Finally, I vary the minimum number of nodes needed in each node. It is best to keep this value on the lower side, as lower values lead to more complexity required to capture the patterns of our data.
 
 ### Gradient Boosted Tree
 
@@ -995,4 +995,209 @@ This project successfully created a predictive model that can estimate NBA seaso
 
 Understanding hyperparameters and how to appropriately select them was certainly the greatest challenge for me. While I believe I did a solid job with my results, there is still room to re-tune a lot of my models. Retuning the models could lead to lower RMSE values, alleviating my dissatisfaction with my value of RMSE in my final fit model. Due to time constraints, those adjustments cannot happen in this report. However, the work in this project is continuous, and I can continue to tune my hyperparamters in the future. 
 
+# Appendix - EDA
+
+This section provides further information on how predictors in recipes were chosen. This section is not a completely exhaustive EDA, but rather an analysis that highlights what I believe to be the most prevalent observations to justify my decisions. This analysis is performed on the entire training set.
+
+## Interactions
+
+Interaction terms between variables are used through my recipes and are a highlight of the interaction recipe. Here, we examine a few more interactions.
+
+@fig-box-allstar shows the box plot distribution of salaries against whether or not a player is an all-star. While the salary values are currently transformed to the 7th root, it is clear to see that being an all-star is correlated with higher salaries.
+
+```{r}
+#| label: fig-box-allstar
+
+simple_boxplot <- function(some_var, interact, two = FALSE){
+  
+  if(two == TRUE){
+  
+    nba_seasons_train |> 
+      ggplot(aes({{some_var}}, adj_salary, fill = {{interact}})) +
+      geom_boxplot() +
+      theme_bw() +
+      labs(
+        title = rlang::englue("Bar plot distribution of {{some_var}}"),
+        subtitle = rlang::englue("Grouped by {{interact}}"),
+        y = '')
+    
+  }
+  else{
+    
+    nba_seasons_train |> 
+      ggplot(aes({{some_var}}, adj_salary, fill = {{some_var}})) +
+      geom_boxplot() +
+      theme_bw() +
+      labs(
+        title = rlang::englue("Bar plot distribution of {{some_var}}"),
+        y = '')
+    
+  }
+  
+}
+
+simple_boxplot(all_star)
+
+```
+
+
+It may be the case that, within being an all-star, those who play for larger market teams also have higher salaries than all-stars who play for small-market teams. My definition of market size comes from the [valuation of NBA teams](https://www.forbes.com/lists/nba-valuations/?sh=cb88faf69828). The number of teams in each market size is equal (10 teams each). In @fig-box-allstar-market, we find that increasing the market size group within those who are all-stars does increase salaries. We do not see this observation within those who are not all-stars. This analysis implies that NBA teams in large markets are more likely to pay higher salaries to all-star-caliber players.
+
+```{r}
+#| label: fig-box-allstar-market
+
+simple_boxplot(all_star, market_size, TRUE)
+
+```
+
+We can do a similar market-size analysis using players’ longevity. @fig-box-tenyear shows the box plot distribution of salaries against whether or not a player has been in the NBA for ten or more years. We see that longevity is positively correlated with seasonal salaries.
+
+```{r}
+#| label: fig-box-tenyear
+
+simple_boxplot(ten_years, market_size, FALSE)
+
+```
+
+@fig-box-tenyear-market incorporates market size into the analysis. The results are near-identical to @fig-box-allstar-market: increasing the market size group within those who have been in the NBA for at least 10 years does increase salaries. In this scenario, we could argue that a large market tends to demand well-known players for entertainment purposes. Players who have been in the NBA for a decade are more likely to be known by all fans. So, they get paid higher amounts to play for these teams.
+
+```{r}
+#| label: fig-box-tenyear-market
+
+simple_boxplot(ten_years, market_size, TRUE)
+
+```
+
+Simple reasoning can help us conclude that as a player plays in more games during the season, our model should predict that they are receiving higher salaries. Again, the longevity of a player may play a role in this salary as well. @fig-scat-g-five shows the scatterplot between games played and salaries, with curves depicting the trends of those who have and have not been in the NBA for at least five years. We can see that players with more longevity are paid higher at every level on the x-axis. However, this observation could just be a result of many young players being on rookie contracts. So even though they are effective as players, rookies have not had the opportunity to adjust their contracts accordingly.
+
+```{r}
+#| label: fig-scat-g-five
+
+simple_scatter(g, five_years, TRUE)
+
+```
+
+@fig-scat-gs-ten addresses some of this concern by showing a scatterplot between games started and salaries, with curves depicting the trends of those who have and have not been in the NBA for at least ten years. With the ten-year mark, players have had time to get new contracts that reflect their skill levels. Furthermore, it is fair to assume that players who start games are highly valued by their team, implying they should be paid more. Still Figure XX identifies higher salaries for players with more longevity, although the difference between the two groups does seem to be smaller than in @fig-scat-g-five.
+
+```{r}
+#| label: fig-scat-gs-ten
+
+simple_scatter(gs, ten_years, TRUE)
+
+```
+
+## Unusual distributions
+
+In the missingness check, I note observations that have percentage-based predictors that are NA or 0 should be dropped from the dataset. What I do not mention are the cases of observations that have nearly 100% for these predictors. @fig-simp-dense-fg  shows the density distribution of field goal percentages. Generally speaking, this graph has a very nice normal distribution with the middle-fifty of players falling between .405 and .485. On the left side of the distribution, we can see the cluster of players with a field goal percentage of 0, which we expected. However, there is a cluster on the right-hand side of the distribution with a near-impossible value of 1.
+
+```{r}
+#| label: simp-dens-func
+#| echo: false
+## density plot for numeric variables ##
+
+simple_density <- function(var){
+  
+  estdens <- density(unlist(nba_seasons_train |> select({{var}}) |>  filter(!is.na({{var}}))))
+  estquant <- quantile(nba_seasons_train |> select({{var}}), probs = probs <- c(0, 0.25, 0.5, 0.75, 0.9, 1), na.rm = TRUE)
+  
+  df_dens <- data.frame(
+    x = estdens$x,
+    y = estdens$y,
+    quantfct = factor(findInterval(estdens$x, estquant))
+  )
+  
+  dens_plot <- 
+  ggplot(data = df_dens)+
+    geom_line(aes(x = x, y = y))+
+    geom_ribbon(aes(x = x, ymin = 0, ymax = y, fill = quantfct),
+      alpha = .7)+
+    scale_x_continuous(breaks = estquant)+
+    scale_fill_brewer(palette = 'BuPu') +
+    labs(
+      title = rlang::englue("Density Distribution of {{var}}"),
+      y = '',
+      x = rlang::englue('{{var}}'))+
+    theme_bw()+
+    theme(
+      axis.text.x = element_text(angle = 45),
+      panel.grid = element_blank(),
+      legend.position = "none"
+    )
+
+  quantiles_tibble <- as_tibble(
+    quantile(nba_seasons_train |> select({{var}}), probs = c(0, 0.25, 0.5, 0.75, 0.9, 1), na.rm = TRUE)) |> 
+    mutate(quantiles = c('0%', '25%', '50%', '75%', '90%', '100%'), 
+           .before = value)
+  
+  quantiles_table <- grid::rasterGrob(
+    as_raster(flextable(quantiles_tibble)),
+    interpolate = TRUE,
+    width = unit(2, 'in')
+  )
+  
+  quantiles_image <- 
+    ggplot() +
+    theme_void() +
+    annotation_custom(quantiles_table)
+  
+  cowplot::plot_grid(dens_plot, quantiles_image, rel_widths = c(2.5,1))
+
+}
+
+```
+
+```{r}
+#| label: fig-simp-dense-fg
+
+simple_density(fg_percent)
+
+```
+
+@tbl-fg100 lets us evaluate those with this value further. We see that, like those with 0 or NA percentages, these players made very minimal contributions to their teams during the season. All players in this group played only a handful of games and averaged a relatively small amount of minutes in those games. We can attribute these observations to players who typically only play during “garbage time,” which is when a game is a blowout win/lose and coaches replace usual role players with reserves to give the typical rotation a rest. Ultimately, these players are outliers within our dataset that do not contribute a great deal towards explaining how season statistics predict salaries. Therefore, observations with unusually high field goal percentages (I measure as all those 95% and up), should be dropped from the study. 
+
+```{r}
+#| label: tbl-fg100
+#| tbl-cap: 'Observations with field goal values of 100%'
+
+nba_seasons_train |> 
+  filter(fg_percent == 1) |> 
+  DT::datatable()
+
+```
+
+
+The same trends persist for all percent-based predictors such as the 3-point percentage in @fig-simp-dense-x3p and the effective field goal percentage in @fig-simp-dense-efg. So, all unusual percentages are dropped accordingly.
+
+```{r}
+#| label: fig-simp-dense-x3p
+
+simple_density(x3p_percent)
+
+```
+
+```{r}
+#| label: fig-simp-dense-efg
+
+simple_density(e_fg_percent)
+
+```
+
+
+# Appendix - Data Wrangling
+
+This section briefly identifies the resources and explains the process of collecting the data used in this project.
+
+## Data Sources
+
+When searching for a data source, I wanted data that recorded season statistics and salaries of players over an extended period. Unfortunately, I could not find one data set that had this information. So, I decided to do a bit of data wrangling and merging of data sets.
+
+### Salaries
+
+I found a few data sets with yearly NBA salaries for each player on [Kaggle](https://www.kaggle.com/). The first data set, by [“patrick”, provides salary data from 1996 to 2019](https://www.kaggle.com/datasets/patrickhallila1994/nba-data-from-basketball-reference). The second data set, by[“Fernando Blanco”, provides salary data from 1990 to 2017](https://www.kaggle.com/datasets/whitefero/nba-player-salary-19902017?resource=download). I combined these two data sets to get salaries from 1990 to 2019. In addition, I web-scrapped [2020, 2021, and 2022 season salaries from ESPN](https://www.espn.com/nba/salaries).  
+
+After merging, additional cleaning of players' names had to be done. I had to distinguish between players who have matching names (EX: There have been multiple players named Charles Smith). Since this salary data and the season stats data do not have any matching ID variables, I had to rely on a composite key of the player’s name and the season for merging. So distinguishing individual players was critical. Additional details of these processes are found in `0_salary_wrangling.R`.
+
+### Season Statistics
+
+Season statistics were collected through [Stathead Basketball’s querying system](https://stathead.com/basketball/). Collecting these baseline statistics was not difficult. However, it is obvious that this data set almost entirely has numerical predictors. Thus, the majority of the work done in `0_nba_stats_wrangling.R` was adding categorical predictors to the dataset. Some of these predictors include `made_playoffs`, which indicates whether or not a player played in the playoffs that year, and `five_years`, which indicates that a player has been in the NBA for five or more years.
 

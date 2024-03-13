@@ -25,7 +25,7 @@ nba_seasons_train <- read_rds(here('data/splits_folds/nba_seasons_train.rds'))
 ################################################################################
 ################################################################################
 
-## looking into high correlation ##
+### looking into high correlation  ----
 
   cor(nba_seasons_train |> 
         select(c(adj_salary, mp:ws)))
@@ -59,7 +59,7 @@ for (i in 1:nrow(high_correlation)) {
 }
 
 
-## density plot for numeric variables ##
+### density plot for numeric variables ----
 
 simple_density <- function(var){
   
@@ -110,10 +110,8 @@ simple_density <- function(var){
 
 }
 
-simple_density(e_fg_percent)
 
-
-### scatterplot for numeric variables and target  variable 
+### scatterplot for numeric variables and target  variable ---- 
 
 simple_scatter <- function(some_var, interact, two = FALSE){
   
@@ -145,10 +143,8 @@ simple_scatter <- function(some_var, interact, two = FALSE){
   }
 }
 
-simple_scatter(gs, ten_years, TRUE)
-simple_scatter(orb)
 
-### bar plot distributions
+### bar plot distributions ----
 
 simple_barplot <- function(some_var){
   
@@ -165,10 +161,8 @@ simple_barplot <- function(some_var){
   
 }
 
-simple_barplot(pos)
 
-
-## box plot for predictor-outcome relationships
+## box plot for predictor-outcome relationships ----
 
 simple_boxplot <- function(some_var, interact, two = FALSE){
   
@@ -198,15 +192,6 @@ simple_boxplot <- function(some_var, interact, two = FALSE){
   
 }
 
-simple_boxplot(pos, all_star, TRUE)
-
-
-nba_seasons_train |> 
-  ggplot(aes(all_star, adj_salary, fill = market_size)) +
-  geom_boxplot() +
-  theme_bw() 
-
-
 
 ## finding the best nonlinear trends ##
 
@@ -214,19 +199,47 @@ nba_seasons_train |>
 # orb
 # ast
 
+#nba_seasons_train |> 
+#  ggplot(aes(stl, adj_salary)) +
+#  geom_point(alpha = .1) +
+#  geom_smooth(
+#    method = 'lm',
+#    formula = y ~ splines::ns(x, df = 8),
+#    se = FALSE,
+#    color = 'red'
+#  )
+
+#nba_seasons_train |> 
+#  ggplot(aes(orb, adj_salary)) +
+#  geom_point(alpha = .1) +
+#  geom_smooth()
+
+
+## FOR EDA Appendix ----
+
+#figure1
+simple_boxplot(all_star)
+#figure2
+simple_boxplot(all_star, market_size, TRUE)
+
+#figure3
+simple_boxplot(ten_years, market_size, FALSE)
+#figure4
+simple_boxplot(ten_years, market_size, TRUE)
+
+#figure5
+simple_scatter(g, five_years, TRUE)
+#figure6
+simple_scatter(gs, ten_years, TRUE)
+
+#figure7
+simple_density(fg_percent)
+#figure 8
 nba_seasons_train |> 
-  ggplot(aes(orb, adj_salary)) +
-  geom_point(alpha = .1) +
-  geom_smooth(
-    method = 'lm',
-    formula = y ~ splines::ns(x, df = 8),
-    se = FALSE,
-    color = 'red'
-  )
+  filter(fg_percent == 1) |> 
+  DT::datatable()
 
-nba_seasons_train |> 
-  ggplot(aes(orb, drb)) +
-  geom_point(alpha = .1) +
-  geom_smooth()
-
-
+#figure9
+simple_density(x3p_percent)
+#figure10
+simple_density(e_fg_percent)

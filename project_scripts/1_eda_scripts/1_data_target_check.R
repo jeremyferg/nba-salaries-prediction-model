@@ -35,6 +35,11 @@ nba_seasons |>
   filter(is.na(x3p_percent)) |> 
   DT::datatable(caption = 'Season Statistics of Players with x3p_percent = NA')
 
+nba_seasons |> 
+  filter(is.na(ft_percent)) |> 
+  slice_head(n = 10) |> 
+  DT::datatable()
+
 ## Univariate predictor analysis ##
 
 # adjusted salaries histogram
