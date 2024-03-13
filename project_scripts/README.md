@@ -12,7 +12,7 @@ This folder contains all the R scripts used for this project. Scripts are labele
 
 - `4_fit_tune_scripts` --> folder containing any R scripts that were used to fit and tune the project's models
 
-- `5_model_analysis.R` --> Script used to compare the performance of different models used
+- `5_model_analysis` --> folder containing scripts used to compare the performance of different models
 
 - `6_fit_final.R` --> script fitting the best-performing model
 

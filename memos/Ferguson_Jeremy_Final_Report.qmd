@@ -120,7 +120,7 @@ nba_seasons |>
   ggplot(aes(adj_salary)) + 
   geom_histogram(bins = 120, color = 'white') +
   scale_x_continuous(limits = c(0, 63095401)) +
-  theme_minimal() +
+  theme_bw() +
   labs(title = 'Histogram Distribution of Adjusted Annual NBA Salaries',
        subtitle = 'Most salaries are less than 5 million dollars',
        x = 'Adjusted Salary',
@@ -880,6 +880,7 @@ compare_table |>
                     color = recipe),
                 width = 0.2) +
   geom_point(aes(color = recipe)) +
+  theme_bw() +
   labs(
     title = 'Performance Metrics Distributions',
     subtitle = 'The interaction recipe models tend to perform better',

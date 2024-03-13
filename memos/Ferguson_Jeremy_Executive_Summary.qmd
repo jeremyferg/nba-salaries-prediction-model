@@ -259,6 +259,7 @@ compare_table |>
                     color = recipe),
                 width = 0.2) +
   geom_point(aes(color = recipe)) +
+  theme_bw() +
   labs(
     title = 'Performance Metrics Distributions',
     subtitle = 'The interaction recipe models tend to perform better',
@@ -270,7 +271,7 @@ compare_table |>
 Our final model’s RMSE metric shows that the difference between observed salaries and the predicted salaries of the random forest model is about 2,543,555 million dollars. @fig-per-scat-og gives us a reassuring visualization of predicted salaries against actual salaries. The graph shows that estimate errors related to the RMSE tend to underestimate the actual values. Also, our model is great at capturing variability. This pattern occurs especially as salaries increase on the x-axis. If we know that predicted salaries are underestimates of what players typically receive, an NBA player can simply take this prediction and raise its value a 1 or 2 million dollars. If the model predicts smaller salaries, a player should feel more assured that the model’s prediction is not riddled with errors.
 
 ```{r}
-#| label: tbl-per-met-og
+#| label: per-met-og
 #| echo: false
 
 # metrics set
