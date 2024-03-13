@@ -1,0 +1,322 @@
+---
+title: "Executive Summary"
+subtitle: |
+  | Final Project 
+  | Data Science 2 with R (STAT 301-2)
+author: "Jeremy Ferguson"
+date: today
+
+format:
+  html:
+    toc: true
+    embed-resources: true
+    
+execute:
+  echo: false
+  warning: false
+
+from: markdown+emoji 
+reference-location: margin
+citation-location: margin
+---
+
+::: {.callout-tip icon=false}
+
+## Github Repo Link
+
+[https://github.com/stat301-2-2024-winter/final-project-2-jeremyferg.git](https://github.com/stat301-2-2024-winter/final-project-2-jeremyferg.git)
+
+:::
+
+```{r}
+#| label: libraries and datasets
+#| echo: false
+
+library(tidyverse)
+library(tidymodels)
+library(here)
+library(patchwork)
+
+tidymodels_prefer()
+
+nba_seasons_test <- read_rds(here('data/splits_folds/nba_seasons_train.rds'))
+
+load(here('results/general_recipe/lm_fit_folds_general.rda'))
+load(here('results/general_recipe/null_fit_folds_general.rda'))
+
+# final fit
+load(here('results/final_fit.rda'))
+
+
+```
+
+# Abstract
+
+This project aims to create a predictive model that can estimate the yearly salaries of professional basketball players from the National Basketball Association (NBA). This model uses season statistics from players as its predictors. Other NBA-related factors, such as the location of the player’s team and how long the player has been in the NBA, are also used for the analysis.
+
+In this regression analysis, I am most concerned about the accuracy of my models’ estimation; I want to be able to predict NBA salaries as closely as possible, as this is the main value a player or agent is concerned with. I also suspect there to be outliers in my data. Therefore RMSE is the assessment metric for this project.
+
+# Methods
+
+The main methodology highlight of this project is the usage of various predictive recipes to help conclude the best performance metric. These recipes are used in conjugation with several predictive models focused on flexibility and interpretability. 
+
+The first recipe focuses on general player statistics, such as points, assists, and rebounds. This recipe is simplistic and minimizes the complexity of the modeling process. The second recipe will place a heavy focus on interaction terms; Complexity may come from how predictors interact with each other. The third recipe decreases the number of interaction terms used and adds nonlinearity complexity, capturing nonlinear trends found in several predictors. The last recipe places focus on predictors that are not completely in the player’s control, such as their team’s market size, their position, and whether or not their team makes the playoffs.
+
+# Model Analysis
+
+@fig-com-tog visualizes the performance metric of each of our models using the three targeted recipes (the nonlinear recipe was ultimately dropped). When we compare RMSE values, we look for small means and standard errors. The figure helps us see that many of the models from the interaction recipe produced smaller RMSE values in comparison to other results. Looking at the performance metrics of the interaction recipe, we can see that neural networks, MARS, and random forests all have the same minimizing mean with slightly different standard errors. The random forest model is ultimately chosen for its interpretability, simplicity, and time cost relative to the other two models.
+
+```{r}
+#| label: compare-table
+#| echo: false
+
+# due to naming errors when fitting, I have to load each tuning group each time I want
+## to access another one
+
+## general recipe tunes
+load(here("results/general_recipe/ann_general_tuned.rda"))
+load(here("results/general_recipe/bt_general_tuned.rda"))  
+load(here("results/general_recipe/enet_general_tuned.rda"))    
+load(here("results/general_recipe/lm_fit_folds_general.rda"))  
+load(here("results/general_recipe/mars_general_tuned.rda"))
+load(here("results/general_recipe/null_fit_folds_general.rda"))
+load(here("results/general_recipe/rf_general_tuned.rda"))
+
+gen_table <-
+rbind(
+  
+  ann_outta_tuned |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |>
+    mutate(model = 'ANN', .before = .metric),
+  
+  bt_outta_tuned |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |>
+    mutate(model = 'Boosted Trees', .before = .metric),
+  
+  enet_outta_tuned |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |>
+    mutate(model = 'Elastic Net', .before = .metric),
+  
+  lm_fit_folds |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |>
+    mutate(model = 'OLS', .before = .metric),
+  
+  mars_general_tuned |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |> 
+    mutate(model = 'MARS', .before = .metric),
+  
+  null_fit_folds |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |> 
+    mutate(model = 'Null', .before = .metric),
+  
+  rf_outta_tuned |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |> 
+    mutate(model = 'Random Forest', .before = .metric)
+  
+) |> 
+  mutate(recipe = 'General', .before = model)
+
+## ioteraction recipe tunes
+load(here("results/interact_recipe/ann_interact_tuned.rda"))
+load(here("results/interact_recipe/bt_interact_tuned.rda"))  
+load(here("results/interact_recipe/enet_interact_tuned.rda"))    
+load(here("results/interact_recipe/lm_fit_folds_interact.rda"))  
+load(here("results/interact_recipe/mars_interact_tuned.rda"))
+load(here("results/interact_recipe/null_fit_folds_interact.rda"))
+load(here("results/interact_recipe/rf_interact_tuned.rda"))     
+
+interact_table <-
+rbind(
+  
+  ann_outta_tuned |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |>
+    mutate(model = 'ANN', .before = .metric),
+  
+  bt_outta_tuned |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |>
+    mutate(model = 'Boosted Trees', .before = .metric),
+  
+  enet_outta_tuned |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |>
+    mutate(model = 'Elastic Net', .before = .metric),
+  
+  lm_fit_folds |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |>
+    mutate(model = 'OLS', .before = .metric),
+  
+  mars_interact_tuned |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |> 
+    mutate(model = 'MARS', .before = .metric),
+  
+  null_fit_folds |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |> 
+    mutate(model = 'Null', .before = .metric),
+  
+  rf_outta_tuned |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |> 
+    mutate(model = 'Random Forest', .before = .metric)
+  
+) |> 
+  mutate(recipe = 'Interaction', .before = model)
+
+## outta recipe tunes
+load(here("results/outta_recipe/ann_outta_tuned.rda"))
+load(here("results/outta_recipe/bt_outta_tuned.rda"))  
+load(here("results/outta_recipe/enet_outta_tuned.rda"))    
+load(here("results/outta_recipe/lm_fit_folds_outta.rda"))  
+load(here("results/outta_recipe/mars_outta_tuned.rda"))
+load(here("results/outta_recipe/null_fit_folds_outta.rda"))
+load(here("results/outta_recipe/rf_outta_tuned.rda"))  
+
+outta_table <-
+rbind(
+  
+  ann_outta_tuned |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |>
+    mutate(model = 'ANN', .before = .metric),
+  
+  bt_outta_tuned |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |>
+    mutate(model = 'Boosted Trees', .before = .metric),
+  
+  enet_outta_tuned |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |>
+    mutate(model = 'Elastic Net', .before = .metric),
+  
+  lm_fit_folds |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |>
+    mutate(model = 'OLS', .before = .metric),
+  
+  mars_outta_tuned |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |> 
+    mutate(model = 'MARS', .before = .metric),
+  
+  null_fit_folds |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |> 
+    mutate(model = 'Null', .before = .metric),
+  
+  rf_outta_tuned |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |> 
+    mutate(model = 'Random Forest', .before = .metric)
+  
+) |> 
+  mutate(recipe = 'Out-of_control', .before = model)
+
+compare_table <-
+  rbind(gen_table, interact_table, outta_table)
+
+```
+
+```{r}
+#| label: fig-com-tog
+
+compare_table |> 
+  ggplot(aes(x = model, y = mean)) +
+  geom_errorbar(aes(ymin = mean - 1.96*std_err,
+                    ymax = mean + 1.96*std_err,
+                    color = recipe),
+                width = 0.2) +
+  geom_point(aes(color = recipe)) +
+  labs(
+    title = 'Performance Metrics Distributions',
+    subtitle = 'The interaction recipe models tend to perform better',
+    y = 'rmse'
+  )
+
+```
+
+Our final model’s RMSE metric shows that the difference between observed salaries and the predicted salaries of the random forest model is about 2,543,555 million dollars. @fig-per-scat-og gives us a reassuring visualization of predicted salaries against actual salaries. The graph shows that estimate errors related to the RMSE tend to underestimate the actual values. Also, our model is great at capturing variability. This pattern occurs especially as salaries increase on the x-axis. If we know that predicted salaries are underestimates of what players typically receive, an NBA player can simply take this prediction and raise its value a 1 or 2 million dollars. If the model predicts smaller salaries, a player should feel more assured that the model’s prediction is not riddled with errors.
+
+```{r}
+#| label: tbl-per-met-og
+#| echo: false
+
+# metrics set
+seasons_metrics <- metric_set(rmse, mae, rsq)
+
+# predicting  
+seasons_test_res <- predict(final_fit, nba_seasons_test)
+
+# binding prediction with actual value
+seasons_test_res <- 
+  bind_cols(seasons_test_res, nba_seasons_test) |> 
+  select(adj_salary, .pred)
+
+# transforming back to original
+seasons_test_res_og <- 
+  seasons_test_res |> 
+  mutate(adj_salary = adj_salary**7,
+         .pred = .pred**7)
+
+nba_seasons_test_og <- 
+  nba_seasons_test |> 
+  mutate(adj_salary = adj_salary**7)
+
+```
+
+```{r}
+#| label: fig-per-scat-og
+
+## original
+ggplot(bind_cols(seasons_test_res_og |> select(.pred), nba_seasons_test_og), aes(x = adj_salary, y = .pred)) + 
+  # Create a diagonal line:
+  geom_abline(lty = 2) + 
+  geom_point(alpha = 0.1) + 
+  theme_bw() +
+  labs(
+    title = 'Observed Versus Predicted Values for Random Forest Model',
+    y = "Predicted Salaries", 
+    x = "Salaries") +
+  # Scale and size the x- and y-axis uniformly:
+  coord_obs_pred() 
+
+```
+
+# Future Research
+
+This project successfully created a predictive model that can estimate NBA seasonal salaries based on season statistics of a player. I found it interesting that even though there are many intricate basketball-related statistics, fairly simple metrics and interactions between them can explain a significant portion of expected salaries. While I believe I did a solid job with my results, there is still room to re-tune a lot of my models. Retuning the models could lead to lower RMSE values, alleviating some of my dissatisfaction with the value of RMSE in my final fit model. 
+
+
+
