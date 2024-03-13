@@ -44,6 +44,7 @@ tidymodels_prefer()
 
 nba_seasons <- read_rds(here('data/nba_seasons.rds'))
 nba_seasons_train <- read_rds(here('data/splits_folds/nba_seasons_train.rds'))
+nba_seasons_test <- read_rds(here('data/splits_folds/nba_seasons_train.rds'))
 
 # recipes
 load(here('recipes/nba_recipe_general.rda'))
@@ -53,6 +54,10 @@ load(here('recipes/nba_recipe_nonlinear.rda'))
 
 load(here('results/general_recipe/lm_fit_folds_general.rda'))
 load(here('results/general_recipe/null_fit_folds_general.rda'))
+
+# final fit
+load(here('results/final_fit.rda'))
+
 
 ```
 
@@ -385,5 +390,608 @@ nba_recipe_outta |>
 
 ```
 
+# Model Building & Selection
+
+We will go through the tuning results of each recipe. It is important to note that, for comparison consistency purposes, tuning parameters were not changed relative to the recipe being used.
+
+## Tuning Specificities 
+
+Before continuing to the results, we should review the values used for each hyperparameter. All parameters use 5 levels. Of course, there is no need to further examine the linear and null models, as these models do not have any tuning parameters associated with them.
+
+The elastic net model uses a mixture of lasso and ridge regressions between 0 and 1, which covers the model leaning fully towards lasso and fully towards ridge. The penalty is placed between .316 and 3.16. Here, I wanted to observe differences in the models with high and low penalties. I use the glmnet engine.
+
+The random forest model uses 1 to 15 predictors for each decision tree, 2 to 4 nodes needed to continue the random forest, and 100 to 1000 trees. Of course, the random forest model should not use all the predictors when creating these nodes. 1 to 15 predictors meet that requirement for each of my recipes. I chose to stay conservative with minimum nodes, as we want lower values to deal with general complexity. The wide range of trees simply captures how performance changes as we increase the complexity (the number of trees) in the model. I use the ranger engine.
+
+The boosted trees model uses 1 to 15 predictors for each tree, 1 to 10 nodes needed to continue the boosted tree, and 100 to 1000 trees. The same reasoning used in the random forest model applies here. I intended for the boosted trees model to also tune the learn rate between .1 and .95. However, I carelessly did not consider the log-transformation attached to this hyperparameter when tuning. So, the results of the boosted tree model are unfortunately mismeasured and not useful to the analysis. At the time of writing this report, there is not enough time to fully tune the boosted trees model on four different recipes. However, appropriate retuning to this model will be done in the future.
+
+The neural networks model uses hidden units between 0 and 5, a penalty between 0 and 1, and a number of training iterations between 100 and 750. Since I observed only a small amount of nonlinearity in the data, I did not want to tune very high values in this model. As explained earlier, increasing all these values decreases the chance of overfitting while making the model more complex. It will be interesting to observe, from a nonlinearity standpoint, how complex this model will have to become before it hurts the results. I use the nnet engine.
+
+The MARS model uses a number of predictors between 1 and 50, and degrees of freedom between 1 and 5. Predictors between 1 and 50 cover all potential sizes for each recipe used. Again, I wanted to stay conservative with nonlinearity complexity in these models since there was not an extreme abundance in my exploration. I use the earth engine.
+
+## Individual Model Results
+
+This section compares the performance metrics of each of the four recipes, holding one model constant. Since the null and linear models do not use hyperparameters, these models are saved for the final comparison analysis.
+
+### Elastic Net
+
+@tbl-nnet-gen shows the tuning parameters with the top 5 best model performances for elastic net using the general recipe. We can see that the model performs best when the mixture is 0 or close to 0. This result implies that the model strongly prefers the ridge regression concerning regularization. A smaller penalty is also preferred, leading our model closer to a linear regression model (which would have no penalty). In the future, it may be interesting to examine the RMSE when we allow for no penalty. Considering the trend of the data, we should expect a better-performing model.
+
+```{r}
+#| label: tbl-nnet-gen
+#| tbl-cap: 'Best performances of elastic net (using general recipe)'
+
+load(here("results/general_recipe/enet_general_tuned.rda"))
+
+enet_outta_tuned |> 
+  show_best(metric = 'rmse') |> 
+  select(-c(.estimator, .config)) |>
+  knitr::kable()
+
+```
+
+
+@tbl-nnet-inter, @tbl-nnet-non, and @tbl-nnet-outta shows the elastic net model using the interaction recipe, nonlinear recipe, and out-of-control recipes, respectfully. We can see that each of these recipes use the same combination of optimal hyperparameters as @tbl-nnet-gen. We can conclude that the hyperparameters do not have varying effects on the elastic net model when changing recipes. However, each of these recipes perform better than the general recipe; The nonlinear model gives a mean of 1.20 and the other two recipes give a mean of 1.11 (though the standard error of the interaction recipe is slightly smaller).
+
+```{r}
+#| label: tbl-nnet-inter
+#| tbl-cap: 'Best performances of elastic net (using interaction recipe)'
+
+load(here("results/interact_recipe/enet_interact_tuned.rda"))
+
+enet_outta_tuned |> 
+  show_best(metric = 'rmse') |> 
+  select(-c(.estimator, .config)) |>
+  knitr::kable()
+
+```
+
+```{r}
+#| label: tbl-nnet-non
+#| tbl-cap: 'Best performances of elastic net (using nonlinear recipe)'
+
+load(here("results/nonlinear_recipe/enet_nonlinear_tuned.rda"))
+
+enet_outta_tuned |> 
+  show_best(metric = 'rmse') |> 
+  select(-c(.estimator, .config)) |>
+  knitr::kable()
+
+```
+
+```{r}
+#| label: tbl-nnet-outta
+#| tbl-cap: 'Best performances of elastic net (using out-of-control recipe)'
+
+load(here("results/outta_recipe/enet_outta_tuned.rda"))
+
+enet_outta_tuned |> 
+  show_best(metric = 'rmse') |> 
+  select(-c(.estimator, .config)) |>
+  knitr::kable()
+
+```
+
+### Random Forest
+
+@tbl-rf-gen shows the tuning parameters with the top 5 model performances for random forests using the general recipe. We can see that, for this model, the number of predictors dictates the mean of our prediction metric; How many trees and the minimum number of nodes needed in each node seem to only affect the standard error of our models. However, these standard errors are very close to each other.
+
+```{r}
+#| label: tbl-rf-gen
+#| tbl-cap: 'Best performances of random forest (using general recipe)'
+
+load(here("results/general_recipe/rf_general_tuned.rda"))
+
+rf_outta_tuned |> 
+  show_best(metric = 'rmse') |> 
+  select(-c(.estimator, .config)) |>
+  knitr::kable()
+
+```
+
+@tbl-rf-inter shows the random forests model using the interaction recipe. The number of predictors in the best model increases, which is likely a reflection of the increase of predictors in this recipe in general. The number of trees used maxes out at 1000 trees, and the minimum number of nodes needed remains at 3. The mean of this recipe is much smaller than the general recipe. For future tuning, it would be interesting to see if increasing the number of trees helps or hurts the current model performance.
+
+```{r}
+#| label: tbl-rf-inter
+#| tbl-cap: 'Best performances of random forest (using interaction recipe)'
+
+load(here("results/interact_recipe/rf_interact_tuned.rda"))
+
+rf_outta_tuned |> 
+  show_best(metric = 'rmse') |> 
+  select(-c(.estimator, .config)) |>
+  knitr::kable()
+
+```
+
+@tbl-rf-non shows the random forests model using the nonlinear recipe. In terms of hyperparameters, the only difference between this recipe and the general recipe is that the nonlinear recipe uses the maximum number of allotted predictors (15). Even with this change, the mean of the nonlinear recipe’s performance metric is equal to the general recipe’s. Moreover, the standard error is worse compared to the general recipe. These observations imply that the nonlinear model does no better than a simplistic model.
+
+```{r}
+#| label: tbl-rf-non
+#| tbl-cap: 'Best performances of random forest (using nonlinear recipe)'
+
+load(here("results/nonlinear_recipe/rf_nonlinear_tuned.rda"))
+
+rf_outta_tuned |> 
+  show_best(metric = 'rmse') |> 
+  select(-c(.estimator, .config)) |>
+  knitr::kable()
+
+```
+
+@tbl-rf-outta  shows the random forests model using the out-of-control recipe. This best performing model uses 4 predictors like the general recipe and 1000 trees like the interaction recipe. Unlike the other recipes, this model uses a minimum of 4 nodes needed to continue random forest. The mean is not as good as the interaction recipe but still a nice improvement from the other two recipes.
+
+
+```{r}
+#| label: tbl-rf-outta
+#| tbl-cap: 'Best performances of random forest (using out-of-control recipe)'
+
+load(here("results/outta_recipe/rf_outta_tuned.rda"))
+
+rf_outta_tuned |> 
+  show_best(metric = 'rmse') |> 
+  select(-c(.estimator, .config)) |>
+  knitr::kable()
+
+```
+
+### Boosted Tree
+
+As mentioned in the tuning specification section, the learn rate of the boosted tree model was inaccurately tuned. This error greatly hurts the performance of all the recipes on this model.
+
+As one example, @tbl-bt-gen shows the tuning parameters with the top 5 model performances for boosted trees using the general recipe. We can see that the learn rate is exceptionally high, the exact opposite of what we want if we are trying to minimize overfitting. Since the learn rate is so high, the boosted trees model needs less trees and utilizes less predictors compared to the random forest model. Again, these findings are not an accurate representation of the best performance with my intended hyperparameters. While not ideal, I believe that we have enough model-recipe combinations to drop boosted trees and still maintain robustness in our prediction model.
+
+```{r}
+#| label: tbl-bt-gen
+#| tbl-cap: 'Best performances of boosted trees (using general recipe)'
+
+load(here("results/general_recipe/bt_general_tuned.rda"))
+
+bt_outta_tuned |> 
+  show_best(metric = 'rmse') |> 
+  select(-c(.estimator, .config)) |>
+  knitr::kable()
+
+```
+
+### Neural Network
+
+@tbl-nn-gen shows the tuning parameters with the top 5 model performances for neural networks using the general recipe. This model prefers the maximum hyperparameters I specified in the tuning process: 5 hidden units, a penalty of 1, and 750 training iterations on the entire training set. Hidden units and penalties seem to strongly dictate the mean of RMSE while the training iterations vary the standard error. Given the model prefers its maximized values, we should consider raising each of these values in future tuning. I expect the performance metric to be better in this setting. 
+
+```{r}
+#| label: tbl-nn-gen
+#| tbl-cap: 'Best performances of neural network (using general recipe)'
+
+load(here("results/general_recipe/ann_general_tuned.rda"))
+
+ann_outta_tuned |> 
+  show_best(metric = 'rmse') |> 
+  select(-c(.estimator, .config)) |>
+  knitr::kable()
+
+```
+
+@tbl-nn-inter shows the neural network model using the interaction recipe. For the best performing model, hidden units and penalty hyperparameters remain at 5 and 1, respectively. The number of training iterations decreases to 587. Like previous models, the mean of RMSE is lower when using the interaction recipe compared to the general recipe.
+
+```{r}
+#| label: tbl-nn-inter
+#| tbl-cap: 'Best performances of neural network (using interaction recipe)'
+
+load(here("results/interact_recipe/ann_interact_tuned.rda"))
+
+ann_outta_tuned |> 
+  show_best(metric = 'rmse') |> 
+  select(-c(.estimator, .config)) |>
+  knitr::kable()
+
+```
+
+@tbl-nn-non shows the neural network model using the nonlinear recipe. Following the same trend as found in the random forest model, the best performing model for the neural network model using the nonlinear recipe is the same as the general recipe. Means are the same, and the standard error for the general recipe is slightly lower. It is clear that the nonlinear recipe is not a good candidate for the best performing model.
+
+```{r}
+#| label: tbl-nn-non
+#| tbl-cap: 'Best performances of neural network (using nonlinear recipe)'
+
+load(here("results/nonlinear_recipe/ann_nonlinear_tuned.rda"))
+
+ann_outta_tuned |> 
+  show_best(metric = 'rmse') |> 
+  select(-c(.estimator, .config)) |>
+  knitr::kable()
+
+```
+
+@tbl-nn-outta shows the neural network model using the out-of-control recipe. Like the general and nonlinear model, the hyperparamters for the best performing model all max out my tuning parameters. Similar to previous models, the mean of this recipe is the 2nd-best performing (interactions recipe performs better).
+
+```{r}
+#| label: tbl-nn-outta
+#| tbl-cap: 'Best performances of neural network (using out-of-control recipe)'
+
+load(here("results/outta_recipe/ann_outta_tuned.rda"))
+
+rf_outta_tuned |> 
+  show_best(metric = 'rmse') |> 
+  select(-c(.estimator, .config)) |>
+  knitr::kable()
+
+```
+
+### MARS
+
+@tbl-mar-gen shows the tuning parameters with the top 5 model performances for MARS using the general recipe. This model performs the best with 37 terms and 2 degrees of freedom. These observations imply that it prefers higher numbers of predictors with lower degrees of freedom. Therefore, nonlinear complexity is unnecessary with this recipe, which we should expect to find.
+
+```{r}
+#| label: tbl-mar-gen
+#| tbl-cap: 'Best performances of MARS (using general recipe)'
+
+load(here("results/general_recipe/mars_general_tuned.rda"))
+
+mars_general_tuned |> 
+  show_best(metric = 'rmse') |> 
+  select(-c(.estimator, .config)) |>
+  knitr::kable()
+
+```
+
+@tbl-mar-inter shows the MARS model using the interaction recipe. We can see that the best model here maximizes the allotted values of our hyperparameters. The mean and standard errors are better in this model as well. It seems that the introduction of these new interaction terms creates the need for higher degrees off freedom. Future tuning of the hyperparameters would increase these values to see if performance increases further.
+
+```{r}
+#| label: tbl-mar-inter
+#| tbl-cap: 'Best performances of MARS (using interaction recipe)'
+
+load(here("results/interact_recipe/mars_interact_tuned.rda"))
+
+mars_interact_tuned |> 
+  show_best(metric = 'rmse') |> 
+  select(-c(.estimator, .config)) |>
+  knitr::kable()
+
+```
+
+@tbl-mar-non shows the MARS model using the nonlinear recipe. We observe that the best hyperparameters mean for this recipe and the general recipe are the same. Furthermore, the standard errors are nearly identical. This observation implies that the additional complexity of the nonlinear recipe is unnecessary when using the MARS model. 
+
+```{r}
+#| label: tbl-mar-non
+#| tbl-cap: 'Best performances of MARS (using nonlinear recipe)'
+
+load(here("results/nonlinear_recipe/mars_nonlinear_tuned.rda"))
+
+mars_nonlinear_tuned |> 
+  show_best(metric = 'rmse') |> 
+  select(-c(.estimator, .config)) |>
+  knitr::kable()
+
+```
+
+@tbl-mars-outta shows the MARS model using the out-of-control recipe. The best model follows the same pattern in terms of 37 terms hyperparameter. Degrees of freedom are set at 4, likely do to the increase in interaction terms in this recipe compared to the general and nonlinear recipes. The mean of this recipe is also second to the interaction recipe.
+
+```{r}
+#| label: tbl-mars-outta
+#| tbl-cap: 'Best performances of MARS (using out-of-control recipe)'
+
+load(here("results/outta_recipe/mars_outta_tuned.rda"))
+
+mars_outta_tuned |> 
+  show_best(metric = 'rmse') |> 
+  select(-c(.estimator, .config)) |>
+  knitr::kable()
+
+```
+
+## Grouping Together 
+
+The analysis above clearly shows that the nonlinear recipe will not be the best recipe for our model; In every model, the more simplistic general recipe works as well or better than the nonlinear model. So we can leave those results out of this analysis. @tbl-compare-table show the best RMSE for each model in the general, interaction, and out-of-control recipe. Given the methodology of our project, we need to select the best performing model-recipe combination. When dealing with RMSE, the smaller the value the better.
+
+```{r}
+#| label: tbl-compare-table
+#| tbl-cap: 'Comparison of best performing models across recipes'
+
+# due to naming errors when fitting, I have to load each tuning group each time I want
+## to access another one
+
+## general recipe tunes
+load(here("results/general_recipe/ann_general_tuned.rda"))
+load(here("results/general_recipe/bt_general_tuned.rda"))  
+load(here("results/general_recipe/enet_general_tuned.rda"))    
+load(here("results/general_recipe/lm_fit_folds_general.rda"))  
+load(here("results/general_recipe/mars_general_tuned.rda"))
+load(here("results/general_recipe/null_fit_folds_general.rda"))
+load(here("results/general_recipe/rf_general_tuned.rda"))
+
+gen_table <-
+rbind(
+  
+  ann_outta_tuned |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |>
+    mutate(model = 'ANN', .before = .metric),
+  
+  bt_outta_tuned |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |>
+    mutate(model = 'Boosted Trees', .before = .metric),
+  
+  enet_outta_tuned |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |>
+    mutate(model = 'Elastic Net', .before = .metric),
+  
+  lm_fit_folds |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |>
+    mutate(model = 'OLS', .before = .metric),
+  
+  mars_general_tuned |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |> 
+    mutate(model = 'MARS', .before = .metric),
+  
+  null_fit_folds |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |> 
+    mutate(model = 'Null', .before = .metric),
+  
+  rf_outta_tuned |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |> 
+    mutate(model = 'Random Forest', .before = .metric)
+  
+) |> 
+  mutate(recipe = 'General', .before = model)
+
+## ioteraction recipe tunes
+load(here("results/interact_recipe/ann_interact_tuned.rda"))
+load(here("results/interact_recipe/bt_interact_tuned.rda"))  
+load(here("results/interact_recipe/enet_interact_tuned.rda"))    
+load(here("results/interact_recipe/lm_fit_folds_interact.rda"))  
+load(here("results/interact_recipe/mars_interact_tuned.rda"))
+load(here("results/interact_recipe/null_fit_folds_interact.rda"))
+load(here("results/interact_recipe/rf_interact_tuned.rda"))     
+
+interact_table <-
+rbind(
+  
+  ann_outta_tuned |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |>
+    mutate(model = 'ANN', .before = .metric),
+  
+  bt_outta_tuned |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |>
+    mutate(model = 'Boosted Trees', .before = .metric),
+  
+  enet_outta_tuned |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |>
+    mutate(model = 'Elastic Net', .before = .metric),
+  
+  lm_fit_folds |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |>
+    mutate(model = 'OLS', .before = .metric),
+  
+  mars_interact_tuned |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |> 
+    mutate(model = 'MARS', .before = .metric),
+  
+  null_fit_folds |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |> 
+    mutate(model = 'Null', .before = .metric),
+  
+  rf_outta_tuned |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |> 
+    mutate(model = 'Random Forest', .before = .metric)
+  
+) |> 
+  mutate(recipe = 'Interaction', .before = model)
+
+## outta recipe tunes
+load(here("results/outta_recipe/ann_outta_tuned.rda"))
+load(here("results/outta_recipe/bt_outta_tuned.rda"))  
+load(here("results/outta_recipe/enet_outta_tuned.rda"))    
+load(here("results/outta_recipe/lm_fit_folds_outta.rda"))  
+load(here("results/outta_recipe/mars_outta_tuned.rda"))
+load(here("results/outta_recipe/null_fit_folds_outta.rda"))
+load(here("results/outta_recipe/rf_outta_tuned.rda"))  
+
+outta_table <-
+rbind(
+  
+  ann_outta_tuned |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |>
+    mutate(model = 'ANN', .before = .metric),
+  
+  bt_outta_tuned |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |>
+    mutate(model = 'Boosted Trees', .before = .metric),
+  
+  enet_outta_tuned |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |>
+    mutate(model = 'Elastic Net', .before = .metric),
+  
+  lm_fit_folds |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |>
+    mutate(model = 'OLS', .before = .metric),
+  
+  mars_outta_tuned |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |> 
+    mutate(model = 'MARS', .before = .metric),
+  
+  null_fit_folds |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |> 
+    mutate(model = 'Null', .before = .metric),
+  
+  rf_outta_tuned |> 
+    show_best(metric = 'rmse') |> 
+    slice_head() |> 
+    select(c(.metric, mean, n, std_err)) |> 
+    mutate(model = 'Random Forest', .before = .metric)
+  
+) |> 
+  mutate(recipe = 'Out-of_control', .before = model)
+
+compare_table <-
+  rbind(gen_table, interact_table, outta_table)
+
+compare_table |> 
+  arrange(model) |> 
+  DT::datatable()
+
+```
+
+Though it may already be apparent from the table that the interaction recipe tends to perform the best, we can visualize the mean and standard errors of each group. @fig-com-tog visualizes the performance metric of each of our models using the three targeted recipes.   
+
+```{r}
+#| label: fig-com-tog
+
+compare_table |> 
+  ggplot(aes(x = model, y = mean)) +
+  geom_errorbar(aes(ymin = mean - 1.96*std_err,
+                    ymax = mean + 1.96*std_err,
+                    color = recipe),
+                width = 0.2) +
+  geom_point(aes(color = recipe)) +
+  labs(
+    title = 'Performance Metrics Distributions',
+    subtitle = 'The interaction recipe models tend to perform better',
+    y = 'rmse'
+  )
+
+```
+
+
+The figure helps us see that many of the models from the interaction recipe produced smaller RMSE values in comparison to other results. Looking at the performance metrics of the interaction recipe, we can see that neural network, MARS, and random forests all have the same minimizing mean with slightly different standard errors. It is important to note that all models using this recipe maxed out on the range of hyperparameter values I used, implying that each of these metrics could have been smaller had we expanded the tuning ranges. To me, choosing the winning model comes down to intrepreatablity, simplicity and time cost. The random forest model is easier to interpret compared to the other two models, as this model mirrors decision-making. Random forest is also more simplistic and cost effective than the nonlinear natural of neural networks and MARS. Therefore, the winning model in my project is the random forest model using the interaction recipe. This finding does not surprise me, as most of the complexity in this model was from interactions between predictors. Knowing this model can capture some nonlinearity, random forest easily interpreted the rather minimal amount of nonlinear terms in the data. 
+
+# Final Model Analysis
+
+As mentioned in the target variable exploration, I transitioned salaries by the 7th root for normality purposes. While we should analysis the transformed version of the final fitted model, we should also analyze the target variable on the original fitted scale. This analysis will provide us with further interpretation of the results.
+
+## Transformation results
+
+The metrics for the root-mean squared error, the mean absolute error, and R-squared are shown in @tbl-per-met-nth7. The interpretation of RMSE and MAE is that the average difference between observed salaries and the predicted salaries of the random forest model is about .449 and .335, respectively. Of course the nature of our transform makes it difficult to interpret these values in dollar terms. It is not surprising that MAE is greater than RMSE, does not create as large or a penalty for outliers like RMSE does. So, our results may imply the presence of salary outliers. The interpretation of RSQ is that about 93% of the variability of the observed data can be explained by our random forest model, which is a great value to see. 
+
+```{r}
+#| label: tbl-per-met-nth7
+#| tbl-cap: 'Performance metrics of final model (7th-root transformed)'
+
+# metrics set
+seasons_metrics <- metric_set(rmse, mae, rsq)
+
+# predicting  
+seasons_test_res <- predict(final_fit, nba_seasons_test)
+
+# binding prediction with actual value
+seasons_test_res <- 
+  bind_cols(seasons_test_res, nba_seasons_test) |> 
+  select(adj_salary, .pred)
+
+# metric set tibble
+seasons_metrics(seasons_test_res, truth = adj_salary, estimate = .pred) |> 
+  knitr::kable()
+
+```
+
+@fig-per-scat-nth7 gives us a visualization of predicted salaries against actual salaries. While the actual dollar amounts are still unclear, this scatterplot gives a better understanding of accuracy of our model in terms of variability. Estimate errors also seem to vary between the predictions overestimating and underestimating the actual values. Performing an analysis on the original scale should clear up the interpretations. 
+
+```{r}
+#| label: fig-per-scat-nth7
+
+ggplot(bind_cols(seasons_test_res |> select(.pred), nba_seasons_test), aes(x = adj_salary, y = .pred)) + 
+  # Create a diagonal line:
+  geom_abline(lty = 2) + 
+  geom_point(alpha = 0.1) + 
+  theme_bw() +
+  labs(
+    title = 'Observed Versus Predicted Values for Random Forest Model',
+    subtitle = '7th Root Transformed',
+    y = "Predicted Salaries", 
+    x = "Salaries") +
+  # Scale and size the x- and y-axis uniformly:
+  coord_obs_pred() 
+
+```
+
+## Original Results
+
+Again, we show the metrics for the root-mean squared error, the mean absolute error, and R-squared are shown in @tbl-per-met-og, this time examining salaries on the original scale. The interpretation of RMSE and MAE is that the average difference between observed salaries and the predicted salaries of the random forest model is about 2,543,555 and 1,363,147  dollars, respectively. Generally speaking, these seem like rather large errors. It is important to consider the fact that NBA players make millions of dollars each season, so seeing errors in th millions is not unimaginable. However, I would have liked to see these errors smaller — closer to 1 million dollars. Our results still imply the presence of salary outliers. The interpretation of RSQ is that about 93.4% of the variability of the observed data can be explained by our random forest model. 
+
+```{r}
+#| label: tbl-per-met-og
+#| tbl-cap: 'Performance metrics of final model (original sclae)'
+
+# transforming back to original
+seasons_test_res_og <- 
+  seasons_test_res |> 
+  mutate(adj_salary = adj_salary**7,
+         .pred = .pred**7)
+
+nba_seasons_test_og <- 
+  nba_seasons_test |> 
+  mutate(adj_salary = adj_salary**7)
+
+seasons_metrics(seasons_test_res_og, truth = adj_salary, estimate = .pred) |> 
+  knitr::kable()
+
+```
+
+@fig-per-scat-og gives us a visualization of predicted salaries against actual salaries using the original scale. What may actually be reassuring is that estimate errors tend to underestimate the actual values. This pattern occurs especially as salaries increase on the x-axis. If we know that predicted salaries are underestimates of what players typically receive, an NBA player can simply take this prediction and raise its value a 1 or 2 million dollars. If the model predicts smaller salaries, a player should feel more assured that the model’s prediction is not riddled with errors.
+
+```{r}
+#| label: fig-per-scat-og
+
+## original
+ggplot(bind_cols(seasons_test_res_og |> select(.pred), nba_seasons_test_og), aes(x = adj_salary, y = .pred)) + 
+  # Create a diagonal line:
+  geom_abline(lty = 2) + 
+  geom_point(alpha = 0.1) + 
+  theme_bw() +
+  labs(
+    title = 'Observed Versus Predicted Values for Random Forest Model',
+    subtitle = 'Original Values',
+    y = "Predicted Salaries", 
+    x = "Salaries") +
+  # Scale and size the x- and y-axis uniformly:
+  coord_obs_pred() 
+
+```
+
+## Was it Worth it?
+
+Based on our final model analysis, it seems like creative a predicative model was indeed worth the project. While the estimate errors were less than ideal for me, high variability shows that the model fits our data exceptionally well. The model gives us at the least a solid prediction of salaries that a NBA player or agent can adjust when bargaining for contracts. The random forest model did particularly well in predicting salaries because its ability to deal with small nonlinear variations while retaining a bit of simplicity in the process. We did not need the nonlinearity complexity that MARS and neural network brings but we did need more linear complexity that a null/linear model cannot capture, such as overfitting issues.
+
+# Conclusion
+
+This project successfully created a predictive model that can estimate NBA seasonal salaries based on season statistics of a player. Much of the project’s work was finding a good level of complexity for a model and a model’s recipe. I found it interesting that even though there are many intricate basketball-related statistics, fairly simple metrics and interactions between them can explain a significant portion of expected salaries. With this model, I imagine the bargaining process of NBA contracts to be easier for a NBA players and agents.   
+
+Understanding hyperparameters and how to appropriately select them was certainly the greatest challenge for me. While I believe I did a solid job with my results, there is still room to re-tune a lot of my models. Retuning the models could lead to lower RMSE values, alleviating my dissatisfaction with my value of RMSE in my final fit model. Due to time constraints, those adjustments cannot happen in this report. However, the work in this project is continuous, and I can continue to tune my hyperparamters in the future. 
 
 
