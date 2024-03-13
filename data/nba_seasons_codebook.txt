@@ -1,0 +1,45 @@
+NBA Seasons 
+
+player - Name of the NBA player
+season - Starting year of NBA season
+years_in_league - Number of years a player has been in the NBA
+five_years - 1 if a player has been in the NBA for 5 or more years
+ten_years - 1 if a player has been in the NBA for 10 or more years
+age - The age of a player in a season
+team - Player's team 
+pos - Player's position (G = gaurd, F = forward, C = center)
+salary - Season salary, not adjusted for inflation
+adj_salary - Season salary, adjusted for inflation
+conference - Conference of the team
+market_size - Market sizes of teams (each group has 10 teams within it)
+playoffs - Whether the team went to the playoffs that season
+g - Games played
+gs - Games started
+all_star - 1 if a player is an all-star during that NBA season
+mp - Minutes played per game
+fg - Field goals made per game
+fga - Field goals attempted per game
+x2p - 2-pointers made per game
+x2pa - 2-pointers attempted per game
+x3p - 3-pointers made per game
+x3pa - 3-pointers attempted per game
+ft - Free throws made per game
+fta - Free throws arttempted per game
+orb - Offensive rebounds per game
+drb - Defensive rebounds per game
+trb - Total rebounds per game
+ast - Assists per game
+stl - Steals per game 
+blk - Blocks per game
+tov - Turnovers per game
+pf - Personal fouls per game
+pts - Points per game 
+fg_percent - Season field goal percentage
+x2p_percent - Season 2-pointer percentage
+x3p_percent - Season 3-pointer percentage
+ft_percent - Season free throw percentage
+ts_percent - Season true shooting percentage
+e_fg_percent - Season effective field goal percentage
+ws - Season win share
+
+
