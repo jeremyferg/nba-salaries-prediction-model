@@ -145,8 +145,8 @@ simple_scatter <- function(some_var, interact, two = FALSE){
   }
 }
 
-simple_scatter(x3p_percent, all_star, TRUE)
-simple_scatter(x2p_percent)
+simple_scatter(gs, ten_years, TRUE)
+simple_scatter(orb)
 
 ### bar plot distributions
 
@@ -215,11 +215,11 @@ nba_seasons_train |>
 # ast
 
 nba_seasons_train |> 
-  ggplot(aes(ft_percent, adj_salary)) +
+  ggplot(aes(orb, adj_salary)) +
   geom_point(alpha = .1) +
   geom_smooth(
     method = 'lm',
-    formula = y ~ splines::bs(x, df = 5),
+    formula = y ~ splines::ns(x, df = 8),
     se = FALSE,
     color = 'red'
   )
